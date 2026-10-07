@@ -37,10 +37,18 @@
 .pyramid-mode #pages .row-text:not(.active-line) .row-dot {
   pointer-events: none;
 }
+
+.pyramid-mode #pages .pending-line .letter{
+    color: #eee;
+}
+
+
 .pyramid-mode #pages .completed-line .letter,
 .pyramid-mode #pages .completed-line .letter.read {
-  color: #999999;
+  color: #777;
 }
+
+
 /* Invisible tracks retain their height so activating the next line never shifts the text. */
 @media (max-width: 576px) {
   .pyramid-mode #pages {

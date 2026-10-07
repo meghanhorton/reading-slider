@@ -25,6 +25,7 @@ window.ReadingPyramid = function (api) {
     $(this)
       .toggleClass("active-line", active)
       .toggleClass("completed-line", completed)
+      .toggleClass("pending-line", !completed && !active)
       .find(".row-dot")
       .attr({
         "tabindex": active ? "0" : "-1",
