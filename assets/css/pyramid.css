@@ -1,0 +1,51 @@
+/* Supplements assets/css/styles.css; shared font/color/progress rules stay in that file. */
+.pyramid-mode #pages {
+  inset: 80px 12px 75px;
+  padding: 12px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: var(--pyramid-gap, 18px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: none;
+}
+.pyramid-mode #pages .row-text {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: none;
+  gap: var(--pyramid-word-gap, 22px);
+}
+.pyramid-mode #pages .letters {
+  font-size: var(--word-size, var(--pyramid-size, var(--text-size)));
+}
+.pyramid-mode #row-nav {
+  display: none;
+}
+.pyramid-mode #reader footer {
+  left: 20px;
+  right: 20px;
+}
+.pyramid-mode #example-dots {
+  display: none;
+}
+.pyramid-mode #pages .row-text:not(.active-line) .slider,
+.pyramid-mode #pages .row-text:not(.active-line) .row-dot {
+  visibility: hidden;
+}
+.pyramid-mode #pages .row-text:not(.active-line) .row-dot {
+  pointer-events: none;
+}
+.pyramid-mode #pages .completed-line .letter,
+.pyramid-mode #pages .completed-line .letter.read {
+  color: #999999;
+}
+/* Invisible tracks retain their height so activating the next line never shifts the text. */
+@media (max-width: 576px) {
+  .pyramid-mode #pages {
+    inset: 80px 4px 100px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}

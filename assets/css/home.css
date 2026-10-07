@@ -1,0 +1,20 @@
+/* Homepage supplement; shared fonts remain in styles.css. */
+.home-page { min-height:100dvh; background:#f7f9fc; }
+.home-main { max-width:1100px; padding:64px 24px; }
+.home-heading { position:static; display:block; text-align:center; margin-bottom:40px; }
+.home-eyebrow { color:#607087; font-weight:600; letter-spacing:.04em; margin-bottom:12px; }
+.home-heading h1 { font-size:clamp(32px,5vw,52px); font-weight:700; margin-bottom:14px; }
+.home-heading > p:last-child { color:#69778a; font-size:18px; }
+.tool-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.tool-block { display:flex; flex-direction:column; align-items:flex-start; min-height:330px; padding:38px; border-radius:26px; border:2px solid transparent; text-decoration:none; box-shadow:0 8px 24px #2533480d; transition:transform 150ms,box-shadow 150ms; }
+.tool-block-slider { background:#e7f0ff; color:#164f9c; }
+.tool-block-pyramid { background:#e7f6ee; color:#216445; }
+.tool-block:hover { color:inherit; transform:translateY(-4px); box-shadow:0 14px 30px #25334818; }
+.tool-block:focus-visible { outline:4px solid #2375dc; outline-offset:5px; }
+.tool-icon { width:76px; height:76px; margin-bottom:24px; }
+.tool-block h2 { font-size:clamp(25px,3vw,32px); font-weight:700; margin-bottom:12px; }
+.tool-block p { font-size:18px; line-height:1.5; margin-bottom:28px; }
+.tool-open { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; font-weight:700; font-size:18px; margin-top:auto; }
+.tool-open span { font-size:28px; }
+@media(max-width:650px) { .home-main { padding:36px 20px; } .tool-grid { grid-template-columns:1fr; gap:18px; } .tool-block { padding:28px; min-height:270px; } .home-heading { margin-bottom:28px; } }
+@media(prefers-reduced-motion:reduce) { .tool-block { transition:none; } .tool-block:hover { transform:none; } }
