@@ -1,0 +1,38 @@
+/* Collective lesson timer: display only, with no start/pause/reset buttons. */
+.lesson-heading.has-lesson-total {
+  position: relative;
+  padding-right: 180px;
+}
+.lesson-total-time {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 10px 16px;
+  background: #eef3fa;
+  border: 1px solid #dce4ef;
+  border-radius: 14px;
+}
+.lesson-total-label {
+  color: #69778a;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lesson-total-value {
+  font-size: 27px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #253348;
+}
+.lesson-total-time.is-running .lesson-total-value {
+  color: #16834a;
+}
+@media (max-width: 576px) {
+  .lesson-heading.has-lesson-total { padding-right: 125px; }
+  .lesson-total-time { padding: 8px 10px; }
+  .lesson-total-value { font-size: 22px; }
+  .lesson-total-label { font-size: 12px; }
+}
