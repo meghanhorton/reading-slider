@@ -1,0 +1,31 @@
+/* Lesson planner and tool navigation supplements. */
+.lesson-main { max-width:1000px; padding:32px 20px 60px; }
+.lesson-topbar,.lesson-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+.lesson-heading { margin-bottom:24px; }
+.lesson-heading h1 { font-size:clamp(28px,5vw,42px); font-weight:700; }
+.lesson-section { background:white; padding:24px; border-radius:18px; border:1px solid #e3e8ef; margin-bottom:20px; }
+.lesson-section-heading { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.lesson-section h2 { font-size:23px; margin:0; font-weight:700; }
+.lesson-items { list-style:none; margin:0; padding:0; }
+.lesson-item { display:flex; gap:14px; align-items:flex-start; padding:14px 0; border-top:1px solid #eef1f5; }
+.lesson-check { flex:0 0 auto; width:24px; height:24px; margin-top:4px; cursor:pointer; }
+.lesson-item-content { flex:1; min-width:0; }
+.lesson-activity { font-size:20px; font-weight:600; display:inline-block; padding:3px 0; overflow-wrap:anywhere; }
+.lesson-item.is-complete .lesson-activity { color:#849188; text-decoration:line-through; }
+.lesson-editor { display:none; }
+.lesson-editing .lesson-editor { display:block; }
+.lesson-editing .lesson-view { display:none; }
+.lesson-editing .lesson-section-actions,.lesson-editing .lesson-item-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.lesson-item-content .form-control { margin-bottom:8px; }
+.lesson-section-heading .section-title { flex:1; min-width:160px; }
+.lesson-note { color:#69778a; font-size:14px; }
+.lesson-message { min-height:24px; color:#526174; }
+#lesson-share-dialog { width:min(92vw,700px); border:1px solid #dce1e7; border-radius:18px; padding:24px; font-family:inherit; }
+#lesson-share-dialog::backdrop { background:#25334866; }
+#lesson-share-dialog textarea { overflow-wrap:anywhere; }
+.tool-block-lesson { background:#fff0d9; color:#875617; }
+@media(min-width:950px) { .home-page .tool-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.tool-setup-nav { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+#reader .lesson-tool-header { flex-wrap:wrap; justify-content:flex-start; gap:8px; }
+.lesson-return-button { white-space:nowrap; }
+@media(max-width:576px) { #reader .lesson-tool-header .btn { font-size:11px; padding:6px 8px; } .lesson-section { padding:18px; } }
