@@ -1,723 +1,87 @@
-$(function () {
-  "use strict";
-  const $reader = $("#reader"),
-    $pages = $("#pages"),
-    $measure = $("#measure");
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const segmenter =
-    typeof Intl.Segmenter === "function"
-      ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
-      : null;
-  let examples = [],
-    exampleIndex = 0,
-    pages = [],
-    current = 0,
-    advance,
-    settle,
-    resize,
-    navigating = null;
-  let audio = null,
-    canvas = null,
-    animation = null;
-  const words = () => examples[exampleIndex]?.words || [];
-  const dragging = () => $pages.find(".dragging").length > 0;
-  let extension = null;
-  function stopAdvance() {
-    clearTimeout(advance);
-  }
-  function parseCSV(text) {
-    const rows = [];
-    let row = [],
-      cell = "",
-      quoted = false,
-      closed = false;
-    text = text.replace(/^\uFEFF/, "");
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (quoted) {
-        if (c === '"') {
-          if (text[i + 1] === '"') {
-            cell += '"';
-            i++;
-          } else {
-            quoted = false;
-            closed = true;
-          }
-        } else cell += c;
-      } else if (c === '"' && !cell.trim() && !closed) {
-        cell = "";
-        quoted = true;
-      } else if (c === ",") {
-        row.push(cell);
-        cell = "";
-        closed = false;
-      } else if (c === "\n" || c === "\r") {
-        if (c === "\r" && text[i + 1] === "\n") i++;
-        row.push(cell);
-        rows.push(row);
-        row = [];
-        cell = "";
-        closed = false;
-      } else if (closed && !/\s/.test(c))
-        throw new Error("Unexpected text after a closing CSV quote.");
-      else if (!closed) cell += c;
+/* Shared services: navigation, sharing, lesson storage, timers and celebrations. */
+(function (global) {
+  'use strict';
+  const R = global.ReadingApp = {};
+  R.$ = selector => document.querySelector(selector);
+  R.chars = text => typeof Intl.Segmenter === 'function'
+    ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text.normalize('NFC')), s=>s.segment)
+    : Array.from(text.normalize('NFC'));
+  R.entries = text => text.split(/[,\n]+/u).map(s=>s.trim().normalize('NFC').toLocaleLowerCase()).filter(Boolean);
+  R.words = text => text.normalize('NFC').split(/[\s,;]+/u).map(s=>s.trim()).filter(Boolean);
+  R.id = () => global.crypto?.randomUUID?.() || Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+  R.timer = raw => ({elapsedMs:Math.max(0,Number(raw?.elapsedMs)||0),runningSince:Number.isFinite(raw?.runningSince)&&raw.runningSince>0?raw.runningSince:null,updatedAt:Math.max(0,Number(raw?.updatedAt)||0)});
+  R.elapsed = (raw,now=Date.now()) => {const t=R.timer(raw);return t.elapsedMs+(t.runningSince?Math.max(0,now-t.runningSince):0);};
+  R.timerAction = (raw,action,now=Date.now()) => {const t=R.timer(raw);if(action==='start'&&!t.runningSince)t.runningSince=now;if(action==='pause'){t.elapsedMs=R.elapsed(t,now);t.runningSince=null;}if(action==='reset'){t.elapsedMs=0;t.runningSince=null;}t.updatedAt=Math.max(now,t.updatedAt+1);return t;};
+  R.formatTime = ms => {const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s/60)%60;return(h?h+':':'')+String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+  R.encode = value => {let binary='';for(const b of new TextEncoder().encode(JSON.stringify(value)))binary+=String.fromCharCode(b);return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
+  R.decode = value => {if(!value||value.length>300000)throw Error('Invalid or oversized lesson link.');let text=value.replace(/-/g,'+').replace(/_/g,'/');text+='='.repeat((4-text.length%4)%4);return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(atob(text),c=>c.charCodeAt(0))));};
+  const toolNames=new Set(['slider.html','pyramid.html','wordparts.html','lettertiles.html']);
+  R.safeURL = value => {const u=new URL(String(value||''),location.href);if(!['http:','https:'].includes(u.protocol)&&!(location.protocol==='file:'&&u.protocol==='file:'))throw Error('Use an http or https activity link.');return u;};
+  R.localURL = value => {const u=R.safeURL(value),file=u.pathname.split('/').pop(),ours=u.origin===location.origin||(u.hostname==='meghanhorton.github.io'&&u.pathname.startsWith('/reading-slider/'));return ours&&toolNames.has(file)?file+u.search+(new URLSearchParams(u.hash.slice(1)).has('lesson')?'':u.hash):u.href;};
+  R.planItems = plan => plan?.sections?.flatMap(s=>s.items)||[];
+  R.normalizePlan = raw => {
+    if(!raw||raw.version!==1||typeof raw.id!=='string'||!raw.id||raw.id.length>100||!Array.isArray(raw.sections)||raw.sections.length>50)throw Error('Invalid lesson plan.');
+    const ids=new Set();let count=0;
+    return {version:1,id:raw.id,title:String(raw.title||'Reading Lesson').slice(0,200),updatedAt:Math.max(0,Number(raw.updatedAt)||0),sections:raw.sections.map(section=>{
+      if(!section||typeof section.id!=='string'||ids.has(section.id)||!Array.isArray(section.items))throw Error('Invalid section.');ids.add(section.id);
+      return{id:section.id,title:String(section.title||'Section').slice(0,200),items:section.items.map(item=>{
+        if(!item||typeof item.id!=='string'||ids.has(item.id)||++count>200)throw Error('Invalid activity.');ids.add(item.id);
+        return{id:item.id,title:String(item.title||'Activity').slice(0,200),url:R.localURL(item.url),done:!!item.done,timer:R.timer(item.timer)};
+      })};
+    })};
+  };
+  R.readPlan = id => {try{const data=localStorage.getItem('reading:lesson:'+id);return data?R.normalizePlan(JSON.parse(data)):null;}catch(error){return null;}};
+  R.lastPlan = () => {try{const id=localStorage.getItem('reading:last-lesson');return id?R.readPlan(id):null;}catch(error){return null;}};
+  function mergeTimers(plan,other){const map=new Map(R.planItems(other).map(i=>[i.id,i]));R.planItems(plan).forEach(item=>{const local=R.timer(map.get(item.id)?.timer);if(local.updatedAt>R.timer(item.timer).updatedAt)item.timer=local;});return plan;}
+  R.freshPlan = plan => {const local=R.readPlan(plan.id);return local?mergeTimers(local.updatedAt>=plan.updatedAt?local:plan,local.updatedAt>=plan.updatedAt?plan:local):plan;};
+  R.touchPlan = plan => {plan.updatedAt=Math.max(Date.now(),plan.updatedAt+1);return plan;};
+  R.savePlan = plan => {mergeTimers(plan,R.readPlan(plan.id));R.planItems(plan).forEach(i=>i.url=R.localURL(i.url));try{localStorage.setItem('reading:lesson:'+plan.id,JSON.stringify(plan));localStorage.setItem('reading:last-lesson',plan.id);return true;}catch(error){return false;}};
+  R.planSnapshot = plan => {const copy=JSON.parse(JSON.stringify(mergeTimers(plan,R.readPlan(plan.id))));R.planItems(copy).forEach(item=>{const t=R.timer(item.timer);item.timer={...t,elapsedMs:R.elapsed(t),runningSince:null};});return copy;};
+  R.lessonURL = (plan,base='lesson.html') => {const u=new URL(base,location.href);u.search='';u.hash='plan='+R.encode(R.planSnapshot(plan));return u.href;};
+  R.activityURL = (item,plan) => {const u=R.safeURL(item.url);if(u.origin===location.origin&&toolNames.has(u.pathname.split('/').pop()))u.hash='lesson='+R.encode({version:1,plan,itemId:item.id,returnBase:new URL('lesson.html',location.href).href});return u.href;};
+  R.parseCSV = text => {
+    const rows=[];let row=[],cell='',quoted=false,closed=false;text=text.replace(/^\uFEFF/,'');
+    for(let i=0;i<text.length;i++){const c=text[i];if(quoted){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else{quoted=false;closed=true;}}else cell+=c;}else if(c==='"'&&!cell.trim()&&!closed){cell='';quoted=true;}else if(c===','){row.push(cell);cell='';closed=false;}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell='';closed=false;}else if(closed&&!/\s/.test(c))throw Error('Unexpected text after a CSV quote.');else if(!closed)cell+=c;}
+    if(quoted)throw Error('CSV has an unclosed quote.');row.push(cell);rows.push(row);const first=rows.findIndex(r=>r.some(c=>c.trim()));if(first>=0&&rows[first].length===1&&/^(text|sentence|example)$/i.test(rows[first][0].trim()))rows.splice(first,1);return rows.flat().map(c=>c.trim()).filter(Boolean);
+  };
+  const icons={home:'M3 10l9-7 9 7M5 9v12h5v-7h4v7h5V9',lesson:'M8 5h13M8 12h13M8 19h13M2 5h1M2 12h1M2 19h1',edit:'M4 16l12-12 4 4-12 12H4v-4M14 6l4 4',copy:'M8 8h13v13H8zM16 8V3H3v13h5',share:'M12 16V3M7 8l5-5 5 5M4 12v9h16v-9',done:'M4 12l5 5L20 6',play:'M7 4l14 8-14 8z',pause:'M8 4v16M16 4v16',reset:'M4 8a9 9 0 1 1-1 8M4 3v6h6',left:'M15 5l-7 7 7 7',right:'M9 5l7 7-7 7',up:'M5 15l7-7 7 7',down:'M5 9l7 7 7-7',new:'M12 4v16M4 12h16',save:'M5 3h14l2 2v16H3V3h2M7 3v6h10V3M7 21v-8h10v8'};
+  R.icon = name => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="'+(icons[name]||icons.lesson)+'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  R.action = (id,icon,label,handler,slot='actions') => {const el=document.createElement('button');el.id=id;el.type='button';el.className='icon-button';el.title=label;el.setAttribute('aria-label',label);el.innerHTML=R.icon(icon);el.addEventListener('click',handler);document.querySelector(`[data-nav-slot="${slot}"]`).appendChild(el);return el;};
+  R.setAction = (el,{visible=true,disabled=false}={}) => {el.hidden=!visible;el.disabled=disabled;};
+  let noticeTimer;R.notice = text => {const el=R.$('#app-notice');if(!el)return;clearTimeout(noticeTimer);el.textContent=text;if(text)noticeTimer=setTimeout(()=>{el.textContent='';},5000);};
+  R.copyLink = async (url,share=false,title=document.title) => {
+    try{if(share&&navigator.share){await navigator.share({title,url});return;}if(location.protocol==='file:'||!navigator.clipboard)throw Error('manual');await navigator.clipboard.writeText(url);R.notice('Link copied.');}
+    catch(error){if(error.name==='AbortError')return;let d=R.$('#share-dialog');if(!d){d=document.createElement('dialog');d.id='share-dialog';d.innerHTML='<h2>Copy link</h2><label for="share-url">Select and copy this link</label><textarea id="share-url" class="form-control mt-3" rows="6" readonly></textarea><button type="button" class="btn btn-primary mt-3">Close</button>';d.querySelector('button').addEventListener('click',()=>d.close());document.body.appendChild(d);}d.querySelector('textarea').value=url;d.showModal();d.querySelector('textarea').focus();d.querySelector('textarea').select();}
+  };
+  let context=null,audio=null,canvas=null,animation=null;
+  R.stopCelebration = () => {cancelAnimationFrame(animation);if(canvas)canvas.remove();canvas=null;};
+  function unlockAudio(){try{const A=global.AudioContext||global.webkitAudioContext;if(!A)return;if(!audio)audio=new A();if(audio.state==='suspended')audio.resume().catch(()=>{});}catch(error){}}
+  R.celebrate = () => {
+    if(audio?.state==='running'){const now=audio.currentTime;[[1046.5,.15,.85],[2093,.04,.6]].forEach(([f,v,d])=>{const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=f;g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(v,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+d);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+d+.03);o.onended=()=>{o.disconnect();g.disconnect();};});}
+    R.stopCelebration();canvas=document.createElement('canvas');canvas.className='confetti';canvas.setAttribute('aria-hidden','true');document.body.appendChild(canvas);const ctx=canvas.getContext('2d');if(!ctx){R.stopCelebration();return;}
+    const w=innerWidth,h=innerHeight,dpr=Math.min(devicePixelRatio||1,2),reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;canvas.width=w*dpr;canvas.height=h*dpr;ctx.scale(dpr,dpr);const colors=['#2375dc','#ffca48','#ec6394','#52b788','#9c7bea'];const parts=Array.from({length:reduce?40:140},()=>({x:Math.random()*w,y:reduce?Math.random()*h:-Math.random()*h*.5,vx:(Math.random()-.5)*100,vy:140+Math.random()*220,s:5+Math.random()*7,a:Math.random()*6.28,color:colors[Math.floor(Math.random()*5)]}));const start=performance.now();let last=start;
+    function frame(now){const duration=reduce?1000:3000;if(now-start>duration){R.stopCelebration();return;}const dt=Math.min((now-last)/1000,.04);last=now;ctx.clearRect(0,0,w,h);ctx.globalAlpha=Math.min(1,(duration-(now-start))/600);parts.forEach(p=>{if(!reduce){p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=2*dt;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.fillStyle=p.color;ctx.fillRect(-p.s/2,-p.s/3,p.s,p.s*.65);ctx.restore();});animation=requestAnimationFrame(frame);}animation=requestAnimationFrame(frame);
+  };
+  function currentContext(){if(!context)return null;const plan=R.freshPlan(context.plan),item=R.planItems(plan).find(i=>i.id===context.itemId);return item?{plan,item}:null;}
+  function timerChange(action){const data=currentContext();if(!data)return;data.item.timer=R.timerAction(data.item.timer,action);R.touchPlan(data.plan);R.savePlan(data.plan);context.plan=data.plan;}
+  R.init = () => {
+    if(R.initialized)return;R.initialized=true;
+    const bar=R.$('#appbar');if(!bar)return;
+    [['index.html','home','Home'],['lesson.html','lesson','Lesson plan']].forEach(([href,icon,label])=>{const a=document.createElement('a');a.href=href;a.className='icon-button';a.title=label;a.setAttribute('aria-label',label);a.innerHTML=R.icon(icon);bar.querySelector('[data-nav-slot="links"]').appendChild(a);});
+    bar.querySelector('.appbar-title').textContent=document.title;
+    const size=()=>{const h=Math.ceil(bar.getBoundingClientRect().height);if(R.navHeight!==h){R.navHeight=h;document.documentElement.style.setProperty('--nav-height',h+'px');global.dispatchEvent(new Event('reading:layout'));}};
+    if(typeof ResizeObserver==='function')new ResizeObserver(size).observe(bar);else global.addEventListener('resize',size);size();
+    document.addEventListener('pointerdown',unlockAudio,{passive:true});document.addEventListener('keydown',unlockAudio);
+    try{const value=new URLSearchParams(location.hash.slice(1)).get('lesson');if(value){const raw=R.decode(value),base=new URL(raw.returnBase,location.href),plan=R.normalizePlan(raw.plan);if(raw.version!==1||base.origin!==location.origin||!base.pathname.endsWith('/lesson.html')||!R.planItems(plan).some(i=>i.id===raw.itemId))throw Error('Invalid checklist context.');context={plan,itemId:raw.itemId,base:base.href};}}
+    catch(error){R.notice('Checklist return link could not be loaded.');}
+    if(context){
+      const finish=R.action('complete-return','done','Complete and return to checklist',()=>{const data=currentContext();if(!data)return;data.item.timer=R.timerAction(data.item.timer,'pause');data.item.done=true;R.touchPlan(data.plan);R.savePlan(data.plan);location.assign(R.lessonURL(data.plan,context.base));});finish.classList.add('success-button');
+      const slot=bar.querySelector('[data-nav-slot="timer"]'),time=document.createElement('output');time.className='timer-value';time.setAttribute('aria-label','Activity elapsed time');slot.appendChild(time);
+      const start=R.action('timer-start','play','Start timer',()=>timerChange('start'),'timer'),pause=R.action('timer-pause','pause','Pause timer',()=>timerChange('pause'),'timer');R.action('timer-reset','reset','Reset timer',()=>{if(confirm('Reset this activity’s recorded time?'))timerChange('reset');},'timer');
+      const refresh=()=>{const data=currentContext();if(!data)return;time.textContent=R.formatTime(R.elapsed(data.item.timer));start.disabled=!!data.item.timer.runningSince;pause.disabled=!data.item.timer.runningSince;};refresh();setInterval(refresh,250);
     }
-    if (quoted) throw new Error("CSV has an unclosed quotation mark.");
-    row.push(cell);
-    rows.push(row);
-    const first = rows.findIndex((r) => r.some((c) => c.trim()));
-    if (
-      first >= 0 &&
-      rows[first].length === 1 &&
-      /^(text|sentence|example)$/i.test(rows[first][0].trim())
-    )
-      rows.splice(first, 1);
-    return rows
-      .flat()
-      .map((c) => c.trim())
-      .filter(Boolean);
-  }
-  function unlockAudio() {
-    try {
-      const A = window.AudioContext || window.webkitAudioContext;
-      if (!A) return;
-      if (!audio) audio = new A();
-      if (audio.state === "suspended") audio.resume().catch(() => {});
-    } catch (e) {
-      console.warn(e);
-    }
-  }
-  document.addEventListener("pointerdown", unlockAudio, { passive: true });
-  document.addEventListener("keydown", unlockAudio);
-  function stopConfetti() {
-    cancelAnimationFrame(animation);
-    if (canvas) canvas.remove();
-    canvas = null;
-  }
-  function celebrate() {
-    const example = examples[exampleIndex];
-    if (example.celebrated) return;
-    example.celebrated = true;
-    if (audio?.state === "running") {
-      const now = audio.currentTime;
-      [
-        [1046.5, 0.15, 0.85],
-        [2093, 0.045, 0.6],
-      ].forEach(([f, v, d]) => {
-        const o = audio.createOscillator(),
-          g = audio.createGain();
-        o.frequency.value = f;
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(v, now + 0.012);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + d);
-        o.connect(g);
-        g.connect(audio.destination);
-        o.start(now);
-        o.stop(now + d + 0.03);
-        o.onended = () => {
-          o.disconnect();
-          g.disconnect();
-        };
-      });
-    }
-    stopConfetti();
-    canvas = document.createElement("canvas");
-    canvas.classList.add("reading-confetti");
-    canvas.setAttribute("aria-hidden", "true");
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      stopConfetti();
-      return;
-    }
-    const w = innerWidth,
-      h = innerHeight,
-      dpr = Math.min(devicePixelRatio || 1, 2);
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    ctx.scale(dpr, dpr);
-    const colors = ["#2375dc", "#ffca48", "#ec6394", "#52b788", "#9c7bea"];
-    const particles = Array.from({ length: reduced.matches ? 40 : 140 }, () => {
-      const left = Math.random() < 0.5;
-      return {
-        x: reduced.matches ? Math.random() * w : left ? w * 0.15 : w * 0.85,
-        y: reduced.matches ? Math.random() * h : h * 0.55,
-        vx: (left ? 1 : -1) * (100 + Math.random() * 300),
-        vy: -270 - Math.random() * 400,
-        s: 5 + Math.random() * 7,
-        r: Math.random() * 6.28,
-        color: colors[Math.floor(Math.random() * 5)],
-      };
-    });
-    const start = performance.now();
-    let last = start;
-    function frame(now) {
-      const duration = reduced.matches ? 1000 : 3000;
-      if (now - start > duration) {
-        stopConfetti();
-        return;
-      }
-      const dt = Math.min((now - last) / 1000, 0.04);
-      last = now;
-      ctx.clearRect(0, 0, w, h);
-      ctx.globalAlpha = Math.min(1, (duration - (now - start)) / 600);
-      particles.forEach((p) => {
-        if (!reduced.matches) {
-          p.vy += 380 * dt;
-          p.x += p.vx * dt;
-          p.y += p.vy * dt;
-          p.r += 3 * dt;
-        }
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.r);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * 0.65);
-        ctx.restore();
-      });
-      animation = requestAnimationFrame(frame);
-    }
-    animation = requestAnimationFrame(frame);
-  }
-  function measure(word) {
-    const rect = word.slider[0].getBoundingClientRect();
-    word.thresholds = word.letters
-      .children()
-      .toArray()
-      .map((el) => {
-        const r = el.getBoundingClientRect();
-        return Math.max(
-          0,
-          Math.min(1, (r.left + r.width / 2 - rect.left) / rect.width),
-        );
-      });
-  }
-  function paint(word) {
-    let passed = 0;
-    word.letters.children().each(function (index) {
-      const read = word.value > 0 && word.value >= word.thresholds[index];
-      $(this).toggleClass("read", read);
-      if (read) passed++;
-    });
-    word.complete = passed === word.thresholds.length;
-    word.slider[0].style.setProperty(
-      "--track-progress",
-      `${Math.max(0, Math.min(1, word.value)) * 100}%`,
-    );
-  }
-  function updateExamples() {
-    $("#example-count").text(`${exampleIndex + 1} of ${examples.length}`);
-    $("#previous-example").prop("disabled", exampleIndex === 0);
-    $("#next-example").prop("disabled", exampleIndex === examples.length - 1);
-    $("#example-dots .example-dot").each(function (i) {
-      const done = examples[i].words.every((w) => w.complete);
-      $(this)
-        .toggleClass("active", i === exampleIndex)
-        .toggleClass("complete", done)
-        .attr("aria-label", `Example ${i + 1}${done ? ", completed" : ""}`);
-      if (i === exampleIndex) $(this).attr("aria-current", "true");
-      else $(this).removeAttr("aria-current");
-    });
-  }
-  function status(auto = false) {
-    if (extension) return extension.status(auto);
-    stopAdvance();
-    if (!pages[current]) return;
-    const complete = pages[current].every((w) => w.complete),
-      all = words().every((w) => w.complete);
-    $("#status").text(
-      all
-        ? "Great reading! This example is complete."
-        : complete
-          ? "Great reading!"
-          : "Drag the blue dot across the words as you read.",
-    );
-    updateExamples();
-    if (auto && all && !dragging()) celebrate();
-    if (
-      auto &&
-      complete &&
-      current < pages.length - 1 &&
-      !navigating &&
-      !dragging()
-    ) {
-      const from = current;
-      advance = setTimeout(() => {
-        if (current === from && !$reader.prop("hidden")) go(current + 1, true);
-      }, 650);
-    }
-  }
-  function update() {
-    if (extension) return extension.update();
-    examples[exampleIndex].page = current;
-    $("#count").text(`Row ${current + 1} of ${pages.length}`);
-    $("#prev").prop("disabled", current === 0);
-    $("#next").prop("disabled", current === pages.length - 1);
-    $pages.children(".page").each(function (i) {
-      $(this)
-        .find(".row-dot")
-        .attr("tabindex", i === current ? "0" : "-1");
-    });
-    status();
-  }
-  function focusHandle() {
-    if (extension) return extension.focus();
-    const h = $pages.children(".page").eq(current).find(".row-dot")[0];
-    if (h) h.focus({ preventScroll: true });
-  }
-  function go(i, focus = false, smooth = true) {
-    if (extension) return extension.go(i, focus);
-    if (i < 0 || i >= pages.length || dragging()) return;
-    stopAdvance();
-    clearTimeout(settle);
-    current = i;
-    update();
-    const el = $pages[0],
-      top = i * el.clientHeight;
-    if (!smooth || reduced.matches || Math.abs(el.scrollTop - top) < 1) {
-      navigating = null;
-      el.scrollTo({ top, behavior: "instant" });
-      if (focus) focusHandle();
-    } else {
-      navigating = { i, focus };
-      el.scrollTo({ top, behavior: "smooth" });
-    }
-  }
-  $pages
-    .on("scroll", () => {
-      if (extension) return;
-      stopAdvance();
-      clearTimeout(settle);
-      settle = setTimeout(() => {
-        if ($reader.prop("hidden") || !pages.length) return;
-        const i = Math.max(
-          0,
-          Math.min(
-            pages.length - 1,
-            Math.round($pages[0].scrollTop / $pages[0].clientHeight),
-          ),
-        );
-        const focus = navigating && navigating.i === i && navigating.focus;
-        navigating = null;
-        current = i;
-        update();
-        if (focus) focusHandle();
-      }, 180);
-    })
-    .on("wheel touchstart", (e) => {
-      if ($(e.target).closest(".row-dot").length) return;
-      navigating = null;
-      stopAdvance();
-    });
-  function makeWord(text, sentence) {
-    const box = $('<div class="word">'),
-      letters = $('<div class="letters" aria-hidden="true">');
-    const chars = segmenter
-      ? Array.from(segmenter.segment(text), (s) => s.segment)
-      : Array.from(text);
-    chars.forEach((c) => $('<span class="letter">').text(c).appendTo(letters));
-    const slider = $('<div class="slider">').append($('<div class="track">'));
-    box.append(letters, slider);
-    return {
-      box,
-      letters,
-      slider,
-      sentence,
-      value: 0,
-      complete: false,
-      thresholds: [],
-    };
-  }
-  function bindRow(row, page, index) {
-    const handle = $('<div class="row-dot">').attr({
-      role: "slider",
-      tabindex: -1,
-      "aria-label": `Example ${exampleIndex + 1}, row ${index + 1} progress`,
-      "aria-orientation": "horizontal",
-      "aria-valuemin": 0,
-      "aria-valuemax": 100,
-      "aria-valuenow": 0,
-    });
-    row.append(handle);
-    let pointer = null,
-      offset = 0;
-    function bounds() {
-      const origin = row[0].getBoundingClientRect().left;
-      const segments = page.map((word) => {
-        const r = word.slider[0].getBoundingClientRect();
-        return { word, left: r.left - origin, width: r.width };
-      });
-      const last = segments[segments.length - 1];
-      return { segments, start: segments[0].left, end: last.left + last.width };
-    }
-    function position(x, b) {
-      row.data("dotX", x);
-      row[0].style.setProperty("--dot-x", x + "px");
-      handle.attr({
-        "aria-valuenow": Math.round((100 * (x - b.start)) / (b.end - b.start)),
-        "aria-valuetext": `${page.filter((w) => w.complete).length} of ${page.length} words passed`,
-      });
-    }
-    function apply(x) {
-      const b = bounds();
-      x = Math.max(b.start, Math.min(b.end, x));
-      b.segments.forEach((s) => {
-        s.word.value = Math.max(0, Math.min(1, (x - s.left) / s.width));
-        paint(s.word);
-      });
-      position(x, b);
-      status();
-    }
-    function restore() {
-      const b = bounds(),
-        next = b.segments.find((s) => !s.word.complete);
-      position(next ? next.left + next.word.value * next.width : b.end, b);
-    }
-    function move(p) {
-      apply(p.clientX - row[0].getBoundingClientRect().left - offset);
-    }
-    function cancel() {
-      const id = pointer;
-      pointer = null;
-      row.removeClass("dragging");
-      if (id !== null && handle[0].hasPointerCapture(id))
-        handle[0].releasePointerCapture(id);
-    }
-    handle
-      .on("pointerdown", (e) => {
-        const p = e.originalEvent;
-        if (
-          !p.isPrimary ||
-          p.button !== 0 ||
-          pointer !== null ||
-          navigating ||
-          current !== index
-        )
-          return;
-        e.preventDefault();
-        stopAdvance();
-        const r = handle[0].getBoundingClientRect();
-        offset = p.clientX - (r.left + r.width / 2);
-        pointer = p.pointerId;
-        page.forEach(measure);
-        row.addClass("dragging");
-        handle[0].focus({ preventScroll: true });
-        handle[0].setPointerCapture(pointer);
-      })
-      .on("pointermove", (e) => {
-        if (e.originalEvent.pointerId === pointer) move(e.originalEvent);
-      })
-      .on("pointerup pointercancel", (e) => {
-        const p = e.originalEvent;
-        if (p.pointerId !== pointer) return;
-        if (p.type === "pointerup") move(p);
-        cancel();
-        status(p.type === "pointerup");
-      })
-      .on("lostpointercapture", () => {
-        if (pointer === null) return;
-        pointer = null;
-        row.removeClass("dragging");
-        status();
-      })
-      .on("keydown", (e) => {
-        if (navigating || current !== index) return;
-        page.forEach(measure);
-        const b = bounds(),
-          x = Number(row.data("dotX"));
-        let next;
-        switch (e.key) {
-          case "ArrowRight":
-          case "ArrowUp":
-            next = x + 12;
-            break;
-          case "ArrowLeft":
-          case "ArrowDown":
-            next = x - 12;
-            break;
-          case "Home":
-            next = b.start;
-            break;
-          case "End":
-            next = b.end;
-            break;
-          default:
-            return;
-        }
-        e.preventDefault();
-        apply(next);
-        status(true);
-      });
-    row.data("restoreDot", restore).data("cancelDrag", cancel);
-  }
-  function cancelDrags() {
-    $pages.find(".row-text").each(function () {
-      const fn = $(this).data("cancelDrag");
-      if (fn) fn();
-    });
-  }
-  function restoreDots() {
-    $pages.find(".row-text").each(function () {
-      const fn = $(this).data("restoreDot");
-      if (fn) fn();
-    });
-  }
-  function paginate(anchor, target = 0) {
-    if (extension) return extension.paginate(anchor, target);
-    cancelDrags();
-    stopAdvance();
-    clearTimeout(settle);
-    navigating = null;
-    words().forEach((w) => w.box.detach());
-    $pages.empty();
-    $measure.empty();
-    const probe = $('<div class="page">'),
-      row = $('<div class="row-text">');
-    probe.append(row);
-    $pages.append(probe);
-    const s = getComputedStyle(probe[0]),
-      available = Math.max(
-        46,
-        probe[0].clientWidth -
-          parseFloat(s.paddingLeft) -
-          parseFloat(s.paddingRight),
-      ),
-      gap = parseFloat(getComputedStyle(row[0]).gap) || 28,
-      size = Number($("#size").val());
-    probe.remove();
-    words().forEach((w) => {
-      w.letters[0].style.removeProperty("--word-size");
-      $measure.append(w.box);
-      let width = w.box[0].getBoundingClientRect().width;
-      if (width > available) {
-        w.letters[0].style.setProperty(
-          "--word-size",
-          (size * available) / width + "px",
-        );
-        width = w.box[0].getBoundingClientRect().width;
-      }
-      w.width = width;
-    });
-    pages = [];
-    let group = [],
-      width = 0,
-      sentence = null;
-    function finish() {
-      if (group.length) pages.push(group);
-      group = [];
-      width = 0;
-    }
-    words().forEach((w) => {
-      if (
-        group.length &&
-        (sentence !== w.sentence || width + gap + w.width > available)
-      )
-        finish();
-      sentence = w.sentence;
-      width += w.width + (group.length ? gap : 0);
-      group.push(w);
-    });
-    finish();
-    pages.forEach((page, i) => {
-      const screen = $('<div class="page">').attr({
-          role: "group",
-          "aria-label": `Row ${i + 1}`,
-        }),
-        row = $('<div class="row-text">');
-      page.forEach((w) => row.append(w.box));
-      screen.append(row);
-      $pages.append(screen);
-      bindRow(row, page, i);
-    });
-    words().forEach((w) => {
-      measure(w);
-      paint(w);
-    });
-    restoreDots();
-    const i = pages.findIndex((p) => p.includes(anchor));
-    go(i >= 0 ? i : Math.min(target, pages.length - 1), false, false);
-  }
-  function switchExample(i) {
-    if (i < 0 || i >= examples.length || dragging()) return;
-    cancelDrags();
-    stopAdvance();
-    clearTimeout(settle);
-    clearTimeout(resize);
-    stopConfetti();
-    words().forEach((w) => w.box.detach());
-    exampleIndex = i;
-    paginate(null, examples[i].page);
-    focusHandle();
-  }
-  $("#example-dots").on("click", ".example-dot", function () {
-    switchExample(Number($(this).data("index")));
-  });
-  $("#previous-example").on("click", () => switchExample(exampleIndex - 1));
-  $("#next-example").on("click", () => switchExample(exampleIndex + 1));
-  $("#setup").on("submit", async function (e) {
-    e.preventDefault();
-    let texts;
-    try {
-      const text = $("#text").val().trim();
-      texts = $("#mode").val() === "csv" ? parseCSV(text) : text ? [text] : [];
-      if (!texts.length) throw new Error("Enter at least one reading example.");
-    } catch (error) {
-      $("#message").text(error.message);
-      return;
-    }
-    const button = $(this).find("button");
-    button.prop("disabled", true);
-    try {
-      if (document.fonts)
-        await document.fonts.load('64px "KG Primary Penmanship Alt"');
-    } catch (error) {
-      console.warn(error);
-    }
-    button.prop("disabled", false);
-    $("#message").text("");
-    cancelDrags();
-    stopAdvance();
-    clearTimeout(settle);
-    clearTimeout(resize);
-    stopConfetti();
-    $pages.empty();
-    $measure.empty();
-    examples = texts.map((text) => {
-      const list = [];
-      const parts = extension
-        ? extension.split(text)
-        : text.split(/(?<=[.!?…])\s+|(?<=[.!?…]["”’'])\s+|\n+/u);
-      parts
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .forEach((s, i) =>
-          s.split(/\s+/u).forEach((w) => list.push(makeWord(w, i))),
-        );
-      return { words: list, page: 0, celebrated: false };
-    });
-    exampleIndex = 0;
-    $("#example-dots").empty();
-    examples.forEach((example, i) =>
-      $('<button type="button" class="example-dot">')
-        .attr("title", `Example ${i + 1}`)
-        .data("index", i)
-        .appendTo("#example-dots"),
-    );
-    $reader.toggleClass("csv-mode", $("#mode").val() === "csv");
-    $reader.prop("hidden", false);
-    $("body").addClass("reading");
-    paginate(null, 0);
-    focusHandle();
-    document.dispatchEvent(
-      new CustomEvent("reading:submitted", {
-        detail: { mode: $("#mode").val(), text: $("#text").val().trim() },
-      }),
-    );
-  });
-  $("#size").on("input", function () {
-    document.documentElement.style.setProperty(
-      "--text-size",
-      this.value + "px",
-    );
-    $("#size-label").text(this.value + "px");
-  });
-  $("#prev").on("click", () => go(current - 1, true));
-  $("#next").on("click", () => go(current + 1, true));
-  $("#reset").on("click", () => {
-    cancelDrags();
-    stopConfetti();
-    examples.forEach((ex) => {
-      ex.page = 0;
-      ex.celebrated = false;
-      ex.words.forEach((w) => {
-        w.value = 0;
-        w.complete = false;
-      });
-    });
-    words().forEach(paint);
-    restoreDots();
-    if (extension) extension.update();
-    else go(0, true);
-  });
-  $("#edit").on("click", () => {
-    cancelDrags();
-    stopAdvance();
-    clearTimeout(settle);
-    clearTimeout(resize);
-    stopConfetti();
-    navigating = null;
-    $reader.prop("hidden", true);
-    $("body").removeClass("reading");
-    $("#text").trigger("focus");
-  });
-  $(window).on("resize", () => {
-    if ($reader.prop("hidden")) return;
-    stopAdvance();
-    clearTimeout(resize);
-    resize = setTimeout(() => paginate(pages[current]?.[0], current), 120);
-  });
-  $(document).on("keydown", (e) => {
-    if ($reader.prop("hidden")) return;
-    if (e.key === "PageDown") {
-      e.preventDefault();
-      go(current + 1, true);
-    } else if (e.key === "PageUp") {
-      e.preventDefault();
-      go(current - 1, true);
-    } else if (e.key === "Escape") $("#edit").trigger("click");
-  });
-  if (
-    document.body.classList.contains("pyramid-mode") &&
-    window.ReadingPyramid
-  ) {
-    extension = window.ReadingPyramid({
-      $reader,
-      $pages,
-      $measure,
-      words,
-      measure,
-      paint,
-      bindRow,
-      cancelDrags,
-      restoreDots,
-      stopAdvance,
-      celebrate,
-      updateExamples,
-      getPages: () => pages,
-      setPages: (p) => {
-        pages = p;
-      },
-      getCurrent: () => current,
-      setCurrent: (i) => {
-        current = i;
-      },
-      clearNavigation: () => {
-        navigating = null;
-        clearTimeout(settle);
-      },
-      setSavedPage: (i) => {
-        examples[exampleIndex].page = i;
-      },
-    });
-  }
-  const params = new URLSearchParams(location.search);
-  if (params.has("csv") || params.has("text")) {
-    const csv = params.has("csv");
-    $("#mode").val(csv ? "csv" : "text");
-    $("#text").val(params.get(csv ? "csv" : "text"));
-    if (params.get("autostart") !== "0") {
-      const form = document.getElementById("setup");
+    if(document.body.dataset.page==='home'){const p=new URLSearchParams(location.search);if(p.has('text')||p.has('csv')){const u=new URL('slider.html',location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href);}}
+  };
+})(window);
 
-      if (typeof form.requestSubmit === "function") {
-        form.requestSubmit();
-      } else {
-        form.dispatchEvent(
-          new Event("submit", {
-            bubbles: true,
-            cancelable: true
-          })
-        );
-      }
-    }
-  }
-});
+$(function(){ window.ReadingApp.init(); });
