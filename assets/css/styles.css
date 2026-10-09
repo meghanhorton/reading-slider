@@ -355,3 +355,30 @@ body[data-page='wordparts'] .reading-row.is-leaving { opacity: 1; visibility: vi
     padding: 0;
   }
 }
+
+/* LANGUAGE STRUCTURE / COLORED TOOL HEADERS */
+body[data-page='slider'] { --tool-band:var(--theme-light-blue,#048CD6); --tool-band-ink:#25194f; }
+body[data-page='pyramid'] { --tool-band:var(--theme-orange,#FF6B43); --tool-band-ink:#25194f; }
+body[data-page='wordparts'] { --tool-band:var(--theme-purple,#552CB8); --tool-band-ink:#fff; }
+body[data-page='lettertiles'] { --tool-band:var(--theme-pink,#FC7DA8); --tool-band-ink:#25194f; }
+body[data-page='lesson'] { --tool-band:var(--theme-yellow,#FFC567); --tool-band-ink:#25194f; }
+body[data-page='slider'] .appbar,body[data-page='pyramid'] .appbar,body[data-page='wordparts'] .appbar,body[data-page='lettertiles'] .appbar,body[data-page='lesson'] .appbar { background:var(--tool-band); color:var(--tool-band-ink); border-bottom:0; }
+body:is([data-page='slider'],[data-page='pyramid'],[data-page='wordparts'],[data-page='lettertiles'],[data-page='lesson']) .appbar .icon-button { background:transparent; border:2px solid #fff; color:var(--tool-band-ink); }
+body:is([data-page='slider'],[data-page='pyramid'],[data-page='wordparts'],[data-page='lettertiles'],[data-page='lesson']) .appbar .icon-button:hover:not(:disabled) { background:#ffffff30; border-color:#fff; color:var(--tool-band-ink); }
+body:is([data-page='slider'],[data-page='pyramid'],[data-page='wordparts'],[data-page='lettertiles'],[data-page='lesson']) .appbar .icon-button:focus-visible { outline:3px solid var(--tool-band-ink); outline-offset:3px; }
+body:is([data-page='slider'],[data-page='pyramid'],[data-page='wordparts'],[data-page='lettertiles'],[data-page='lesson']) .appbar .tool-brand-name,body:is([data-page='slider'],[data-page='pyramid'],[data-page='wordparts'],[data-page='lettertiles'],[data-page='lesson']) .appbar .nav-count { color:var(--tool-band-ink); }
+body:is([data-page='slider'],[data-page='pyramid'],[data-page='wordparts'],[data-page='lettertiles'],[data-page='lesson']) .appbar .tool-brand-icon { background:transparent; padding:0; width:44px; height:46px; border-radius:0; }
+.tool-brand-mascot { display:block; width:100%; height:100%; object-fit:contain; object-position:center bottom; }
+body:is([data-page='slider'],[data-page='pyramid'],[data-page='wordparts'],[data-page='lettertiles'],[data-page='lesson']) .appbar .timer-value { background:#ffffff30; color:var(--tool-band-ink); border:1px solid #fff; }
+.hero-language-preview { padding:20px; }
+.hero-language-heading { display:flex; align-items:center; gap:10px; margin-bottom:16px; font-size:15px; font-weight:700; color:#25194f; }
+.hero-language-heading img { width:30px; height:34px; object-fit:contain; }
+.hero-language-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 12px; }
+.hero-language-card { min-width:0; }
+.hero-language-art { display:flex; align-items:flex-end; justify-content:center; aspect-ratio:4/5; background:var(--tool-color); border-radius:18px; overflow:hidden; }
+.hero-language-art img { display:block; width:90%; height:90%; object-fit:contain; object-position:center bottom; }
+.hero-language-label { display:block; margin-top:7px; color:#552CB8; text-align:center; font-size:12px; line-height:1.3; font-weight:700; }
+.language-page-heading { margin:16px 0 32px; }
+.language-page-heading h1 { color:#25194f; font-weight:700; font-size:44px; }
+.language-page-heading p { color:#6f6684; }
+@media(max-width:576px) { .hero-language-preview { padding:16px; } .language-page-heading h1 { font-size:34px; } }

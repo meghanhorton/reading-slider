@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Parts</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body data-page="wordparts">
+  <nav id="appbar" class="appbar" aria-label="App navigation">
+    <div class="nav-group" data-nav-slot="links"></div>
+    <span class="appbar-title"></span>
+    <div class="nav-group" data-nav-slot="reading"></div>
+    <div class="nav-group nav-actions" data-nav-slot="actions"></div>
+    <div class="nav-group" data-nav-slot="timer"></div>
+    <p id="app-notice" class="app-notice" role="status" aria-live="polite"></p>
+  </nav>
+  <main id="setup-panel" class="page-content setup-panel">
+    <h1>Word Parts</h1>
+    <form id="reading-form">
+      <input id="reading-format" type="hidden" value="text">
+      <label for="reading-part" class="form-label">Word part</label>
+      <input id="reading-part" class="form-control form-control-lg mb-3" value="ed" maxlength="30" placeholder="ed, sh, or at" required>
+      <label for="reading-text" class="form-label">Words — separated by commas, spaces, or new lines</label>
+      <textarea id="reading-text" class="form-control form-control-lg" rows="6" maxlength="50000">bed, fed, red, led</textarea>
+      <p class="small text-secondary mt-2">The part can appear anywhere in a word. Complete and release each word to advance automatically.</p>
+      <label for="reading-size" class="form-label">Text size: <span id="reading-size-label">120px</span></label>
+      <input id="reading-size" class="form-range" type="range" min="64" max="180" value="120">
+      <fieldset class="emphasis-settings">
+        <legend>Reading emphasis</legend>
+        <label for="reading-groups" class="form-label">Letter combinations (comma-separated)</label>
+        <input id="reading-groups" class="form-control" placeholder="ee, ea, sh">
+        <label for="reading-sight" class="form-label mt-3">Whole sight words (comma-separated)</label>
+        <input id="reading-sight" class="form-control" placeholder="the, to, you">
+        <p class="small text-secondary mt-2 mb-0">Groups use a purple track and are read together with a shorter drag.</p>
+      </fieldset>
+      <button id="reading-start" class="btn btn-primary btn-lg" type="submit">Start reading</button>
+      <p id="reading-error" class="text-danger mt-3" role="status"></p>
+    </form>
+  </main>
+  <section id="reader-panel" class="reader-panel" aria-label="Word Parts activity" hidden>
+    <nav id="example-dots" class="example-dots" aria-label="Reading examples" hidden></nav>
+    <div id="reading-viewport" class="reading-viewport">
+      <div id="reading-stage" class="reading-stage"></div>
+    </div>
+    <footer id="reading-status" class="reading-footer" role="status" aria-live="polite"></footer>
+  </section>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/language/reading.js"></script>
+</body>
+</html>
