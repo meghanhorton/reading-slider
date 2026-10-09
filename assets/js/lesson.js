@@ -40,7 +40,7 @@ $(function(){
     select.addEventListener('change',()=>{builderSectionId=select.value;renderBuilder();R.$('#builder-section').focus();});panel.appendChild(grid);
   }
   function render(){
-    const root=$('#lesson-sections').empty();$('#lesson-panel').toggleClass('is-editing',editing);$('#lesson-title').text(plan.title);$('#lesson-title-input').val(plan.title);edit.innerHTML=R.icon(editing?'done':'edit');edit.title=editing?'Finish editing lesson':'Edit lesson';edit.setAttribute('aria-label',edit.title);
+    const root=$('#lesson-sections').empty();$('#lesson-panel').toggleClass('is-editing',editing);$('#lesson-editor-nav').toggleClass('is-editing',editing);$('#lesson-title').text(plan.title);$('#lesson-title-input').val(plan.title);edit.innerHTML=R.icon(editing?'done':'edit')+'<span class="lesson-editor-label">'+(editing?'Done':'Edit')+'</span>';edit.title=editing?'Finish editing lesson':'Edit lesson';edit.setAttribute('aria-label',edit.title);
     plan.sections.forEach((section,index)=>{
       const card=$('<section class="lesson-section">').attr('data-section',section.id).appendTo(root),heading=$('<div class="section-heading">').appendTo(card);
       $('<h2 class="view-only">').text(section.title).appendTo(heading);$('<input class="form-control edit-only section-title">').val(section.title).attr({'aria-label':'Section title',maxlength:200}).appendTo(heading);
