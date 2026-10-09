@@ -46,8 +46,8 @@
   };
   const icons={home:'M3 10l9-7 9 7M5 9v12h5v-7h4v7h5V9',lesson:'M8 5h13M8 12h13M8 19h13M2 5h1M2 12h1M2 19h1',edit:'M4 16l12-12 4 4-12 12H4v-4M14 6l4 4',copy:'M8 8h13v13H8zM16 8V3H3v13h5',share:'M12 16V3M7 8l5-5 5 5M4 12v9h16v-9',done:'M4 12l5 5L20 6',play:'M7 4l14 8-14 8z',pause:'M8 4v16M16 4v16',reset:'M4 8a9 9 0 1 1-1 8M4 3v6h6',left:'M15 5l-7 7 7 7',right:'M9 5l7 7-7 7',up:'M5 15l7-7 7 7',down:'M5 9l7 7 7-7',new:'M12 4v16M4 12h16',save:'M5 3h14l2 2v16H3V3h2M7 3v6h10V3M7 21v-8h10v8'};
   R.icon = name => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="'+(icons[name]||icons.lesson)+'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  R.action = (id,icon,label,handler,slot='actions') => {if(document.body.dataset.page==='lesson'&&slot==='actions'&&id.startsWith('lesson-'))slot='lesson-editor';const el=document.createElement('button');el.id=id;el.type='button';el.className='icon-button';el.title=label;el.setAttribute('aria-label',label);el.innerHTML=R.icon(icon);if(slot==='lesson-editor'){const caption=document.createElement('span');caption.className='lesson-editor-label';caption.textContent=R.lessonEditorLabels[id]||label;el.appendChild(caption);}el.addEventListener('click',handler);document.querySelector(`[data-nav-slot="${slot}"]`).appendChild(el);return el;};
-  R.setAction = (el,{visible=true,disabled=false}={}) => {el.hidden=!visible;el.disabled=disabled;};
+  R.action = (id,icon,label,handler,slot='actions') => {if(document.body.dataset.page==='lesson'&&slot==='actions'&&id.startsWith('lesson-'))slot='lesson-editor';const el=document.createElement('button');el.id=id;el.type='button';el.className='icon-button';el.title=label;el.setAttribute('aria-label',label);el.innerHTML=R.icon(icon);if(R.isToolToolbarPage()&&id!=='creator-add-to-lesson'){const caption=document.createElement('span');caption.className='tool-toolbar-label';caption.textContent=R.toolToolbarLabels[id]||label;el.appendChild(caption);}if(slot==='lesson-editor'){const caption=document.createElement('span');caption.className='lesson-editor-label';caption.textContent=R.lessonEditorLabels[id]||label;el.appendChild(caption);}el.addEventListener('click',handler);document.querySelector(`[data-nav-slot="${slot}"]`).appendChild(el);R.scheduleToolToolbar();return el;};
+  R.setAction = (el,{visible=true,disabled=false}={}) => {const footerVisibilityChanged=el.hidden!==!visible;el.hidden=!visible;el.disabled=disabled;if(footerVisibilityChanged)R.scheduleToolToolbar();};
   let noticeTimer;R.notice = text => {const el=R.$('#app-notice');if(!el)return;clearTimeout(noticeTimer);el.textContent=text;if(text)noticeTimer=setTimeout(()=>{el.textContent='';},5000);};
   R.copyLink = async (url,share=false,title=document.title) => {
     try{if(share&&navigator.share){await navigator.share({title,url});return;}if(location.protocol==='file:'||!navigator.clipboard)throw Error('manual');await navigator.clipboard.writeText(url);R.notice('Link copied.');}
@@ -219,6 +219,34 @@
       measure();if(typeof ResizeObserver==='function')new ResizeObserver(measure).observe(footer);else window.addEventListener('resize',measure);
     }
   };
+  /* STICKY TOOL CONTROLS */
+  R.isToolToolbarPage=()=>['slider','pyramid','wordparts','lettertiles'].includes(document.body.dataset.page);
+  R.toolToolbarLabels={"reading-edit": "Edit", "reading-copy": "Copy link", "reading-previous": "Previous", "reading-next": "Next", "example-previous": "Previous example", "example-next": "Next example", "tiles-edit": "Edit", "tiles-copy": "Copy link", "complete-return": "Done", "timer-start": "Start", "timer-pause": "Pause", "timer-reset": "Reset"};
+  R.scheduleToolToolbar=()=>{if(!R.toolToolbar||R.toolToolbarFrame)return;R.toolToolbarFrame=requestAnimationFrame(()=>{R.toolToolbarFrame=null;R.refreshToolToolbar();});};
+  R.refreshToolToolbar=()=>{
+    const footer=R.toolToolbar;if(!footer)return;
+    const visible=element=>{for(let node=element;node&&node!==footer;node=node.parentElement)if(node.hidden)return false;return true;};
+    const groups=Array.from(footer.querySelectorAll('.tool-toolbar-group'));
+    groups.forEach(group=>{
+      group.hidden=false;
+      if(group.dataset.toolControls==='spelling'&&R.$('#reader-panel').hidden){group.hidden=true;return;}
+      group.hidden=!Array.from(group.querySelectorAll('button,a,output,.nav-count')).some(visible);
+    });
+    const active=groups.some(group=>!group.hidden);footer.hidden=!active;
+    const height=active?Math.ceil(footer.getBoundingClientRect().height):0;
+    if(R.toolToolbarHeight!==height){R.toolToolbarHeight=height;document.documentElement.style.setProperty('--tool-toolbar-height',height+'px');window.dispatchEvent(new Event('reading:layout'));}
+  };
+  R.initToolToolbar=()=>{
+    if(!R.isToolToolbarPage()||R.toolToolbar)return;
+    const bar=R.$('#appbar'),footer=document.createElement('nav');footer.id='tool-toolbar';footer.className='tool-toolbar';footer.setAttribute('aria-label','Activity controls');footer.hidden=true;
+    const inner=document.createElement('div');inner.className='tool-toolbar-inner';footer.appendChild(inner);
+    for(const slot of ['actions','reading','timer']){const group=bar.querySelector('[data-nav-slot="'+slot+'"]');if(group){group.classList.add('tool-toolbar-group');inner.appendChild(group);}}
+    if(document.body.dataset.page==='lettertiles'){const spelling=R.$('.tile-actions');if(spelling){spelling.classList.add('tool-toolbar-group');spelling.dataset.toolControls='spelling';inner.appendChild(spelling);}}
+    document.body.appendChild(footer);document.body.classList.add('has-tool-toolbar');R.toolToolbar=footer;
+    if(typeof ResizeObserver==='function')new ResizeObserver(()=>R.scheduleToolToolbar()).observe(footer);
+    window.addEventListener('resize',()=>R.scheduleToolToolbar());
+    R.refreshToolToolbar();
+  };
   R.init = () => {
     if(R.initialized)return;R.initialized=true;
     const bar=R.$('#appbar');if(!bar)return;
@@ -241,6 +269,7 @@
     }
     R.creator.init();
     R.finishWhiteHeader();
+    R.initToolToolbar();
     if(document.body.dataset.page==='home'){const p=new URLSearchParams(location.search);if(p.has('text')||p.has('csv')){const u=R.siteURL('language/slider.html');u.search=location.search;u.hash=location.hash;location.replace(u.href);}}
   };
 })(window);
