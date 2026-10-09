@@ -46,6 +46,7 @@
     stop(){this.epoch++;this.cancelAdvance();clearTimeout(this.transitionTimer);this.rows.forEach(row=>row.cancel());this.busy=false;R.stopCelebration();}
     allowed(index){return this.active&&!this.busy&&!this.intro&&index===this.rowIndex;}
     bind(){
+      R.creator.register(()=>R.creator.readingContent(this.mode));
       this.edit=R.action('reading-edit','edit','Edit activity',()=>{this.stop();this.active=false;this.setup.hidden=false;this.view.hidden=true;document.body.classList.remove('is-reading');this.updateNav();R.$('#reading-text').focus();});
       this.copy=R.action('reading-copy','copy','Copy reading link',()=>R.copyLink(this.shareURL()));
       this.previous=R.action('reading-previous',this.mode==='slider'?'up':'left','Previous reading part',()=>this.go(this.rowIndex-1,true),'reading');

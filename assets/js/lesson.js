@@ -2,17 +2,43 @@
 $(function(){
   'use strict';
   const R=window.ReadingApp;R.init();let plan,editing=false;
-  const example={"version": 1, "id": "", "title": "Reading Lesson", "updatedAt": 0, "sections": [{"id": "section-0", "title": "Word Parts", "items": [{"id": "activity-0-0", "title": "-AG", "url": "wordparts.html?part=ag&text=tag%2C+sag%2C+wag%2C+bag", "done": false}, {"id": "activity-0-1", "title": "-AD", "url": "wordparts.html?part=ad&text=dad%2C+sad%2C+bad%2C+mad", "done": false}, {"id": "activity-0-2", "title": "AR", "url": "wordparts.html?part=ar&text=car%2C+star%2C+far%2C+barn%2C+bar%2C+park%2C+jar%2C+part%2C+art%2C+harm%2C+farm%2C+sharp%2C+march%2C+start%2C+yard%2C+hard", "done": false}]}, {"id": "section-1", "title": "Word Pyramid", "items": [{"id": "activity-1-0", "title": "We know where...", "url": "pyramid.html?text=We%0AWe+know%0AWe+know+where%0AWe+know+where+we+could%0AWe+know+where+we+could+stand+around.", "done": false}]}, {"id": "section-2", "title": "More Word Parts", "items": [{"id": "activity-2-0", "title": "ALK", "url": "wordparts.html?part=alk&text=walk%2C+talk%2C+chalk%2C+stalk", "done": false}, {"id": "activity-2-1", "title": "OLD", "url": "wordparts.html?part=old&text=old%2C+gold%2C+cold%2C+sold%2C+bold%2C+mold%2C+hold%2C+told%2C+scold%2C+fold", "done": false}]}, {"id": "section-3", "title": "Sight Words", "items": [{"id": "activity-3-0", "title": "Booster A - 1", "url": "slider.html?text=he+%0Ashe+%0Ame%0Athe+%0Awe+%0Ato%0Ayou+%0Alove+%0Ago", "done": false}]}]};
-  function examplePlan(){const copy=JSON.parse(JSON.stringify(example));copy.id=R.id();return R.normalizePlan(copy);}
+  function blankPlan(){return R.normalizePlan({version:1,id:R.id(),title:'New Reading Lesson',updatedAt:0,sections:[]});}
   function message(text){R.$('#lesson-message').textContent=text;}
-  function persist(){if(!R.savePlan(plan))message('Browser storage is unavailable. Copy your lesson link to keep changes.');try{history.replaceState(null,'',R.lessonURL(plan));}catch(error){}}
+  function persist(){if(!R.savePlan(plan))message('Browser storage is unavailable. Copy your lesson link to keep changes.');try{history.replaceState(null,'',creating?R.creator.lessonURL(plan):R.lessonURL(plan));}catch(error){}}
   function changed(){R.touchPlan(plan);persist();refreshTimes();}
   const edit=R.action('lesson-edit','edit','Edit lesson',()=>{editing=!editing;render();});
   R.action('lesson-copy','copy','Copy lesson link',()=>{persist();R.copyLink(R.lessonURL(plan));});R.action('lesson-share','share','Share lesson',()=>{persist();R.copyLink(R.lessonURL(plan),true,plan.title);});
-  R.action('lesson-new','new','New blank lesson',()=>{if(!confirm('Start a new blank plan? Keep a link or backup of your current lesson.'))return;plan={version:1,id:R.id(),title:'New Reading Lesson',updatedAt:0,sections:[]};editing=true;changed();render();});
+  R.action('lesson-new','new','New blank lesson',()=>{if(!confirm('Start a new blank plan? Keep a link or backup of your current lesson.'))return;plan=blankPlan();editing=true;changed();render();});
   R.action('lesson-export','save','Save lesson backup',()=>{plan=R.freshPlan(plan);const url=URL.createObjectURL(new Blob([JSON.stringify(R.planSnapshot(plan),null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=(plan.title.replace(/[^a-z0-9_-]+/gi,'-')||'lesson')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
   R.action('lesson-import','up','Import lesson backup',()=>R.$('#lesson-import-file').click());
   function moveButton(className,label,text,disabled){return $('<button type="button" class="btn btn-sm btn-outline-secondary">').addClass(className).text(text).attr('aria-label',label).prop('disabled',disabled);}
+  /* LESSON BUILDER: launch tools with an explicit target plan and section. */
+  let creating=new URLSearchParams(location.search).get('create')==='1',builderSectionId='';
+  function renderBuilder(){
+    let panel=document.getElementById('lesson-builder');if(!panel){panel=document.createElement('section');panel.id='lesson-builder';panel.className='lesson-builder';panel.setAttribute('aria-labelledby','lesson-builder-title');R.$('#lesson-sections').before(panel);}
+    panel.replaceChildren();
+    const heading=document.createElement('div');heading.className='builder-heading';
+    const title=document.createElement('h2');title.id='lesson-builder-title';title.textContent='Build your lesson with the tools';heading.appendChild(title);
+    const toggle=document.createElement('button');toggle.type='button';toggle.className='btn '+(creating?'btn-primary':'btn-outline-primary');toggle.textContent=creating?'Exit create mode':'Enable create mode';toggle.setAttribute('aria-pressed',String(creating));toggle.addEventListener('click',()=>{creating=!creating;persist();renderBuilder();panel.querySelector('.builder-heading button').focus();});heading.appendChild(toggle);panel.appendChild(heading);
+    const description=document.createElement('p');description.textContent=creating?'Choose a section, open a tool, then use Add to lesson to save what you create.':'Enable Create mode to turn reading and spelling content into lesson activities.';panel.appendChild(description);
+    if(!creating)return;
+    if(!plan.sections.some(section=>section.id===builderSectionId))builderSectionId=plan.sections[0]?.id||'';
+    const controls=document.createElement('div');controls.className='builder-controls';
+    const label=document.createElement('label');label.htmlFor='builder-section';label.textContent='Add activities to';controls.appendChild(label);
+    const select=document.createElement('select');select.id='builder-section';select.className='form-select';
+    if(!plan.sections.length){const option=document.createElement('option');option.value='';option.textContent='Create a section first';select.appendChild(option);}else plan.sections.forEach(section=>{const option=document.createElement('option');option.value=section.id;option.textContent=section.title;select.appendChild(option);});
+    select.value=builderSectionId;controls.appendChild(select);
+    const addSection=document.createElement('button');addSection.type='button';addSection.className='btn btn-outline-primary';addSection.textContent='+ New section';addSection.addEventListener('click',()=>{if(plan.sections.length>=50){R.notice('Maximum 50 lesson sections.');return;}const input=prompt('Name your new lesson section:','');if(input===null)return;const name=input.trim();if(!name){R.notice('Enter a section name.');return;}if(name.length>200){R.notice('Section names must be 200 characters or fewer.');return;}const section={id:R.id(),title:name,items:[]};plan.sections.push(section);builderSectionId=section.id;changed();render();});controls.appendChild(addSection);panel.appendChild(controls);
+    const grid=document.createElement('div');grid.className='builder-tool-grid';
+    for(const [page,name] of Object.entries(R.creator.names)){
+      const link=document.createElement('a');link.className='builder-tool-btn tool-theme';link.dataset.tool=page;
+      const icon=document.createElement('span');icon.className='builder-tool-icon';icon.innerHTML=R.toolIcon?R.toolIcon(page):R.icon('lesson');link.appendChild(icon);
+      const text=document.createElement('span');text.textContent=name;link.appendChild(text);
+      if(builderSectionId){try{link.href=R.creator.toolURL(page,plan,builderSectionId);}catch(error){link.setAttribute('aria-disabled','true');}}else link.setAttribute('aria-disabled','true');
+      link.addEventListener('click',event=>{if(!builderSectionId){event.preventDefault();R.notice('Create a lesson section first.');return;}try{persist();link.href=R.creator.toolURL(page,plan,builderSectionId);}catch(error){event.preventDefault();R.notice(error.message);}});grid.appendChild(link);
+    }
+    select.addEventListener('change',()=>{builderSectionId=select.value;renderBuilder();R.$('#builder-section').focus();});panel.appendChild(grid);
+  }
   function render(){
     const root=$('#lesson-sections').empty();$('#lesson-panel').toggleClass('is-editing',editing);$('#lesson-title').text(plan.title);$('#lesson-title-input').val(plan.title);edit.innerHTML=R.icon(editing?'done':'edit');edit.title=editing?'Finish editing lesson':'Edit lesson';edit.setAttribute('aria-label',edit.title);
     plan.sections.forEach((section,index)=>{
@@ -28,7 +54,7 @@ $(function(){
         const controls=$('<div class="edit-only editor-actions">').appendTo(content);controls.append(moveButton('item-up','Move activity up','↑',i===0),moveButton('item-down','Move activity down','↓',i===section.items.length-1),$('<button type="button" class="btn btn-sm btn-outline-danger item-delete">').text('Remove'));
         $('<output class="item-time">').attr('aria-label',`Recorded time for ${item.title}`).appendTo(row);
       });$('<button type="button" class="btn btn-outline-primary edit-only item-add">').text('+ Add activity').appendTo(card);
-    });refreshTimes();
+    });refreshTimes();renderBuilder();
   }
   function locate(el){const section=plan.sections.find(s=>s.id===$(el).closest('[data-section]').attr('data-section'));return{section,item:section?.items.find(i=>i.id===$(el).closest('[data-item]').attr('data-item'))};}
   $('#lesson-title-input').on('input',function(){plan.title=this.value||'Reading Lesson';$('#lesson-title').text(plan.title);changed();});
@@ -46,7 +72,7 @@ $(function(){
   $('#lesson-clear').on('click',()=>{if(!confirm('Clear completion checkboxes? Recorded times will be kept.'))return;plan.sections.forEach(s=>s.items.forEach(i=>i.done=false));changed();render();});
   $('#lesson-import-file').on('change',async function(){if(!this.files[0])return;try{plan=R.normalizePlan(JSON.parse(await this.files[0].text()));editing=false;changed();render();message('Lesson imported.');}catch(error){message('Import failed: '+error.message);}this.value='';});
   function refreshTimes(){if(!plan)return;const fresh=R.freshPlan(plan),map=new Map(R.planItems(fresh).map(i=>[i.id,i]));R.planItems(plan).forEach(item=>{const other=map.get(item.id);if(other&&R.timer(other.timer).updatedAt>R.timer(item.timer).updatedAt)item.timer=other.timer;});const now=Date.now();let total=0;R.planItems(plan).forEach(item=>{const elapsed=R.elapsed(item.timer,now);total+=elapsed;const row=document.querySelector(`[data-item="${CSS.escape(item.id)}"] .item-time`);if(row){const text=R.formatTime(elapsed);if(row.textContent!==text)row.textContent=text;}});$('#lesson-total').text(R.formatTime(total));$('#lesson-progress').text(`${R.planItems(plan).filter(i=>i.done).length} of ${R.planItems(plan).length} activities complete`);}
-  try{const value=new URLSearchParams(location.hash.slice(1)).get('plan');plan=value?R.freshPlan(R.normalizePlan(R.decode(value))):R.lastPlan()||examplePlan();render();persist();}
-  catch(error){plan=examplePlan();render();message('That lesson link could not be loaded. Your saved data has not been deleted. '+error.message);}
+  try{const value=new URLSearchParams(location.hash.slice(1)).get('plan');plan=value?R.freshPlan(R.normalizePlan(R.decode(value))):R.lastPlan()||blankPlan();editing=plan.sections.length===0;render();persist();}
+  catch(error){plan=blankPlan();editing=true;render();message('That lesson link could not be loaded. Your saved data has not been deleted. '+error.message);}
   setInterval(refreshTimes,250);globalThis.addEventListener('storage',refreshTimes);
 });

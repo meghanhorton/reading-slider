@@ -287,4 +287,32 @@ body[data-page='wordparts'] .reading-row.is-leaving { opacity: 1; visibility: vi
   .home-hero { padding: 26px 22px; border-radius: 20px; }
 }
 
-
+/* LESSON CREATOR / BUILDER — existing palette and tool identities are retained. */
+.lesson-builder { margin:24px 0 32px; padding:24px; border:2px solid #e8e0ff; border-radius:20px; background:#f8f5ff; }
+.builder-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:12px; }
+.builder-heading h2 { margin:0; color:#25194f; font-size:23px; font-weight:700; }
+.lesson-builder p { color:#6f6684; line-height:1.6; }
+.builder-controls { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:20px 0; }
+.builder-controls label { font-weight:700; color:#25194f; }
+.builder-controls select { flex:1 1 180px; width:auto; }
+.builder-tool-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.builder-tool-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px 12px; min-height:136px; border-radius:16px; background:var(--tool-color,#552CB8); color:var(--tool-ink,#fff); text-align:center; text-decoration:none; font-size:15px; font-weight:700; transition:transform .15s; }
+.builder-tool-btn:hover { color:var(--tool-ink,#fff); transform:translateY(-2px); }
+.builder-tool-btn[aria-disabled='true'] { opacity:.55; cursor:not-allowed; }
+.builder-tool-btn:focus-visible { outline:3px solid #25194f; outline-offset:4px; }
+.builder-tool-icon { display:block; width:42px; height:42px; }
+.creator-strip { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; padding:14px 18px; border:2px solid #e8e0ff; border-radius:14px; background:#f8f5ff; color:#25194f; font-weight:700; }
+.creator-add-button { width:auto; padding:0 14px; gap:8px; background:var(--accent,#552CB8); border-color:var(--accent,#552CB8); color:#fff; white-space:nowrap; }
+.creator-add-button:hover:not(:disabled) { background:var(--accent-dark,#442393); border-color:var(--accent-dark,#442393); color:#fff; }
+.creator-add-button span { font-size:13px; font-weight:700; }
+.creator-add-button .nav-icon { width:22px; height:22px; flex:0 0 auto; }
+.lesson-add-dialog { width:min(560px,calc(100vw - 32px)); max-height:calc(100dvh - 48px); overflow:auto; border:0; border-radius:22px; padding:30px; color:#25194f; background:#fff; }
+.lesson-add-dialog::backdrop { background:#25194f80; }
+.lesson-add-dialog h2 { font-size:28px; font-weight:700; }
+.lesson-add-dialog label { display:block; font-weight:700; margin:18px 0 8px; }
+.creator-target { color:#6f6684; overflow-wrap:anywhere; }
+.creator-save-error { color:#BC3B32; margin-top:18px; }
+.creator-dialog-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; margin-top:24px; }
+@media(max-width:900px) { .builder-tool-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .builder-heading { flex-wrap:wrap; } }
+@media(max-width:576px) { .lesson-builder { padding:18px; } .builder-controls .btn { width:100%; } .lesson-add-dialog { padding:22px; } }
+@media(prefers-reduced-motion:reduce) { .builder-tool-btn { transition:none; } .builder-tool-btn:hover { transform:none; } }

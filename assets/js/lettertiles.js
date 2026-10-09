@@ -3,6 +3,7 @@ $(function(){
   'use strict';
   const R=window.ReadingApp;R.init();let targets=[],completed=new Set(),tokens=[],nextId=0,locked=false,pointer=null,suppressUntil=0,timer=null;
   const board=R.$('#tile-board'),bank=R.$('#tile-bank'),setup=R.$('#setup-panel'),view=R.$('#reader-panel');
+  R.creator.register(()=>R.creator.spellingContent());
   function feedback(text,positive=false){$('#tile-feedback').text(text).toggleClass('is-positive',positive);}
   const edit=R.action('tiles-edit','edit','Edit spelling list',()=>{endDrag();clearTimeout(timer);R.stopCelebration();view.hidden=true;setup.hidden=false;document.body.classList.remove('is-reading');updateNav();R.$('#tile-words').focus();});
   const copy=R.action('tiles-copy','copy','Copy spelling lesson',()=>{const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('text',targets.join(', '));R.copyLink(url.href);});
