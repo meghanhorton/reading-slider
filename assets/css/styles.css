@@ -333,3 +333,25 @@ body[data-page='wordparts'] .reading-row.is-leaving { opacity: 1; visibility: vi
 @media(max-width:950px) { .home-content .tool-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 20px; } }
 @media(max-width:480px) { .home-content .tool-grid { gap:20px 12px; } .mascot-tool-art { padding:8px; border-radius:22px; } .mascot-tool-title { font-size:17px; margin-top:8px; } }
 @media(prefers-reduced-motion:reduce) { .mascot-tool-art { transition:none; } .mascot-tool-card:hover .mascot-tool-art { transform:none; } }
+
+.mascot-tool-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  aspect-ratio: 3 / 5;
+}
+
+.mascot-tool-art img {
+  display: block;
+  width: 90%;
+  height: auto;
+  flex: 0 0 90%;
+  object-fit: contain;
+}
+
+@media (max-width: 480px) {
+  .mascot-tool-art {
+    padding: 0;
+  }
+}
