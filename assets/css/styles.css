@@ -398,3 +398,20 @@ body[data-page='home'] #appbar .appbar-title { display:none !important; }
 .minimal-tools-item span { color:var(--tool-link-color); font-size:17px; font-weight:700; line-height:1.3; }
 .minimal-tools-item:hover,.minimal-tools-item[aria-current='page'] { color:var(--tool-link-color); text-decoration:underline; text-underline-offset:4px; }
 .minimal-tools-item:focus-visible { outline:2px solid #552CB8; outline-offset:-2px; }
+
+/* PUPPY HOME ICON */
+#appbar .home-logo-button { padding:0; }
+#appbar .home-logo-image { display:block; width:34px; height:34px; object-fit:contain; margin:0; border-radius:7px; }
+
+/* TRANSPARENT PUPPY + PLAIN TOOLS */
+#appbar .home-logo-button,#appbar .home-logo-button:hover,#appbar .home-logo-button:active { display:inline-flex; align-items:center; justify-content:center; padding:0; margin:0; border:0; border-radius:0; background:transparent; box-shadow:none; min-width:44px; min-height:44px; text-decoration:none; }
+#appbar .home-logo-image { display:block; width:44px; height:auto; max-height:44px; padding:0; margin:0; border:0; border-radius:0; object-fit:contain; }
+#appbar .minimal-tools-toggle,#appbar .minimal-tools-toggle:hover,#appbar .minimal-tools-toggle:active,#appbar .tools-dropdown-toggle,#appbar .tools-dropdown-toggle:hover,#appbar .tools-dropdown-toggle:active { width:auto; min-width:44px; min-height:44px; padding:0; margin:0; border:0; border-radius:0; background:transparent; box-shadow:none; text-decoration:none; cursor:pointer; }
+#appbar .minimal-tools-toggle::after { content:none; }
+#appbar .minimal-tools-toggle::marker { content:''; }
+#appbar .minimal-tools-toggle::-webkit-details-marker { display:none; }
+#appbar .tools-chevron { display:none; }
+#appbar .minimal-tools-item,#appbar .minimal-tools-item:hover,#appbar .minimal-tools-item[aria-current='page'],#appbar .tools-dropdown-item,#appbar .tools-dropdown-item:hover,#appbar .tools-dropdown-item[aria-current='page'],#appbar .tools-dropdown-label { text-decoration:none; }
+#appbar .minimal-tools-item[aria-current='page'] span,#appbar .tools-dropdown-item[aria-current='page'] .tools-dropdown-label { font-weight:800; text-decoration:none; }
+#appbar .minimal-tools-item[aria-current='page'] span::after,#appbar .tools-dropdown-item[aria-current='page'] .tools-dropdown-label::after { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:currentColor; margin-left:8px; vertical-align:middle; }
+#appbar :is(.home-logo-button,.minimal-tools-toggle,.tools-dropdown-toggle):focus-visible { outline:2px solid currentColor; outline-offset:3px; }

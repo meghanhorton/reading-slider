@@ -202,10 +202,12 @@
     details.addEventListener('keydown',event=>{if(event.key==='Escape'&&details.open){event.preventDefault();event.stopPropagation();details.open=false;summary.focus();}});
     window.addEventListener('resize',()=>{if(details.open)position();});
   };
+  /* PUPPY BRAND ASSETS */
+  R.homeLogoMarkup=()=>'<img class="home-logo-image" src="'+R.siteURL('assets/img/branding/app-icon.png?v=puppy2').href+'" alt="" width="34" height="34">';
   R.init = () => {
     if(R.initialized)return;R.initialized=true;
     const bar=R.$('#appbar');if(!bar)return;
-    [['index.html','home','Home']].forEach(([href,icon,label])=>{const a=document.createElement('a');a.href=R.siteURL(R.route(href)).href;a.className='icon-button';a.title=label;a.setAttribute('aria-label',label);a.innerHTML = icon === 'lesson' ? R.toolIcon('lesson') : R.icon(icon);bar.querySelector('[data-nav-slot="links"]').appendChild(a);});
+    [['index.html','home','Home']].forEach(([href,icon,label])=>{const a=document.createElement('a');a.href=R.siteURL(R.route(href)).href;a.className='icon-button';a.title=label;a.setAttribute('aria-label',label);a.innerHTML=icon==='home'?R.homeLogoMarkup():(icon==='lesson'?R.toolIcon('lesson'):R.icon(icon));if(icon==='home')a.classList.add('home-logo-button');bar.querySelector('[data-nav-slot="links"]').appendChild(a);});
     R.addToolsDropdown(bar);
     bar.querySelector('.appbar-title').innerHTML = R.brandMarkup(document.body.dataset.page);
     document.querySelectorAll('[data-tool-icon]').forEach(el => {
