@@ -17,46 +17,75 @@
     <p id="app-notice" class="app-notice" role="status" aria-live="polite"></p>
   </nav>
   <main class="page-content home-content">
-    <header class="home-heading">
-      <p>Let's practice reading</p>
-      <h1>Reading Tools</h1>
-      <p>Choose an activity to get started.</p>
-    </header>
-    <nav class="tool-grid" aria-label="Reading activities">
-      <a class="tool-card" data-tool="slider" href="slider.html">
-        <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <h2>Reading Slider</h2>
-        <p>Slide through words and sentences as you read.</p>
-        <span class="card-open">Start reading <span aria-hidden="true">→</span></span>
-      </a>
-      <a class="tool-card" data-tool="pyramid" href="pyramid.html">
-        <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5h13M8 12h13M8 19h13M2 5h1M2 12h1M2 19h1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <h2>Sentence Pyramids</h2>
-        <p>Build a sentence one line at a time.</p>
-        <span class="card-open">Start a pyramid <span aria-hidden="true">→</span></span>
-      </a>
-      <a class="tool-card" data-tool="wordparts" href="wordparts.html">
-        <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 16l12-12 4 4-12 12H4v-4M14 6l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <h2>Word Parts</h2>
-        <p>Keep a word part and change the letters around it.</p>
-        <span class="card-open">Practice word parts <span aria-hidden="true">→</span></span>
-      </a>
-      <a class="tool-card" data-tool="lettertiles" href="lettertiles.html">
-        <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <h2>Letter Tiles</h2>
-        <p>Build spelling words with draggable letter tiles.</p>
-        <span class="card-open">Practice spelling <span aria-hidden="true">→</span></span>
-      </a>
-      <a class="tool-card" data-tool="lesson" href="lesson.html">
-        <svg class="card-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12l5 5L20 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <h2>Lesson Plan</h2>
-        <p>Plan activities, share a checklist, and record completion and time.</p>
-        <span class="card-open">Open lesson plan <span aria-hidden="true">→</span></span>
-      </a>
-    </nav>
+    <section class="home-hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="hero-eyebrow">Practice together. Grow together.</p>
+        <h1 id="hero-title">Small steps.<br>Big reading wins.</h1>
+        <p class="hero-description">Jump into a reading or spelling tool for a quick practice session—or build a lesson plan, share it to your iPad, and work through the activities together.</p>
+        <div class="hero-actions">
+          <a class="btn btn-lg hero-lesson-button" href="lesson.html">
+            <span class="hero-button-icon" data-tool-icon="lesson" aria-hidden="true"></span>
+            Plan a lesson
+          </a>
+          <a class="btn btn-lg btn-outline-primary" href="#practice-tools">Explore the tools <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <div class="hero-preview" aria-hidden="true">
+        <div class="preview-heading">Let's practice reading</div>
+        <div class="preview-grid">
+          <div class="preview-card tool-theme" data-tool="slider">
+            <span class="preview-icon" data-tool-icon="slider"></span>
+            <span>Reading Slider</span>
+          </div>
+          <div class="preview-card tool-theme" data-tool="pyramid">
+            <span class="preview-icon" data-tool-icon="pyramid"></span>
+            <span>Sentence Pyramids</span>
+          </div>
+          <div class="preview-card tool-theme" data-tool="wordparts">
+            <span class="preview-icon" data-tool-icon="wordparts"></span>
+            <span>Word Parts</span>
+          </div>
+          <div class="preview-card tool-theme" data-tool="lettertiles">
+            <span class="preview-icon" data-tool-icon="lettertiles"></span>
+            <span>Letter Tiles</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="practice-tools" aria-labelledby="practice-title">
+      <header class="practice-introduction">
+        <h2 id="practice-title">Choose a practice tool</h2>
+        <p>Work on a specific skill, or use these activities in your lesson plan.</p>
+      </header>
+      <nav class="tool-grid" aria-label="Practice tools">
+        <a class="tool-card tool-theme" data-tool="slider" href="slider.html">
+          <span class="card-icon" data-tool-icon="slider"></span>
+          <h2>Reading Slider</h2>
+          <p>Slide through words and sentences as you read.</p>
+          <span class="card-open">Start reading <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="tool-card tool-theme" data-tool="pyramid" href="pyramid.html">
+          <span class="card-icon" data-tool-icon="pyramid"></span>
+          <h2>Sentence Pyramids</h2>
+          <p>Build a sentence one line at a time.</p>
+          <span class="card-open">Start a pyramid <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="tool-card tool-theme" data-tool="wordparts" href="wordparts.html">
+          <span class="card-icon" data-tool-icon="wordparts"></span>
+          <h2>Word Parts</h2>
+          <p>Keep a word part and change the letters around it.</p>
+          <span class="card-open">Practice word parts <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="tool-card tool-theme" data-tool="lettertiles" href="lettertiles.html">
+          <span class="card-icon" data-tool-icon="lettertiles"></span>
+          <h2>Letter Tiles</h2>
+          <p>Build spelling words with draggable letter tiles.</p>
+          <span class="card-open">Practice spelling <span aria-hidden="true">→</span></span>
+        </a>
+      </nav>
+    </section>
   </main>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="assets/js/app.js"></script>
-
 </body>
 </html>
