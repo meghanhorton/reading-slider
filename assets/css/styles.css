@@ -316,3 +316,20 @@ body[data-page='wordparts'] .reading-row.is-leaving { opacity: 1; visibility: vi
 @media(max-width:900px) { .builder-tool-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .builder-heading { flex-wrap:wrap; } }
 @media(max-width:576px) { .lesson-builder { padding:18px; } .builder-controls .btn { width:100%; } .lesson-add-dialog { padding:22px; } }
 @media(prefers-reduced-motion:reduce) { .builder-tool-btn { transition:none; } .builder-tool-btn:hover { transform:none; } }
+
+/* MASCOT HOMEPAGE CARDS */
+.home-content .tool-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; align-items:start; }
+.mascot-tool-card[data-tool='slider'] { --mascot-color:var(--theme-light-blue,#048CD6); }
+.mascot-tool-card[data-tool='pyramid'] { --mascot-color:var(--theme-orange,#FF6B43); }
+.mascot-tool-card[data-tool='wordparts'] { --mascot-color:var(--theme-purple,#552CB8); }
+.mascot-tool-card[data-tool='lettertiles'] { --mascot-color:var(--theme-pink,#FC7DA8); }
+.mascot-tool-card { display:block; min-width:0; text-decoration:none; color:#552CB8; }
+.mascot-tool-art { display:block; aspect-ratio:4/5; padding:14px; overflow:hidden; border-radius:28px; background:var(--mascot-color); transition:transform .15s ease; }
+.mascot-tool-art img { display:block; width:100%; height:100%; object-fit:contain; }
+.mascot-tool-title { margin:10px 0 0; text-align:center; color:#552CB8; font-size:20px; font-weight:700; line-height:1.3; letter-spacing:-.02em; }
+.mascot-tool-card:hover { color:#552CB8; }
+.mascot-tool-card:hover .mascot-tool-art { transform:translateY(-3px); }
+.mascot-tool-card:focus-visible { outline:3px solid #552CB8; outline-offset:6px; border-radius:28px; }
+@media(max-width:950px) { .home-content .tool-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 20px; } }
+@media(max-width:480px) { .home-content .tool-grid { gap:20px 12px; } .mascot-tool-art { padding:8px; border-radius:22px; } .mascot-tool-title { font-size:17px; margin-top:8px; } }
+@media(prefers-reduced-motion:reduce) { .mascot-tool-art { transition:none; } .mascot-tool-card:hover .mascot-tool-art { transform:none; } }
