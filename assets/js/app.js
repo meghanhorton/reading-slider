@@ -17,7 +17,7 @@
   R.decode = value => {if(!value||value.length>300000)throw Error('Invalid or oversized lesson link.');let text=value.replace(/-/g,'+').replace(/_/g,'/');text+='='.repeat((4-text.length%4)%4);return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(atob(text),c=>c.charCodeAt(0))));};
   const toolNames=new Set(['slider.html','pyramid.html','wordparts.html','lettertiles.html']);
   R.safeURL = value => R.resolveURL(value);
-  R.localURL = value => {const u=R.safeURL(value),file=u.pathname.split('/').pop();return R.languageFiles.has(file)&&u.origin===R.siteRoot.origin&&u.pathname===R.siteURL('language/'+file).pathname?'language/'+file+u.search+(new URLSearchParams(u.hash.slice(1)).has('lesson')?'':u.hash):u.href;};
+  R.localURL = value => {const u=R.safeURL(value),file=u.pathname.split('/').pop(),subject=R.mathFiles?.has(file)?'math':R.languageFiles.has(file)?'language':null;return subject&&u.origin===R.siteRoot.origin&&u.pathname===R.siteURL(subject+'/'+file).pathname?subject+'/'+file+u.search+(new URLSearchParams(u.hash.slice(1)).has('lesson')?'':u.hash):u.href;};
   R.planItems = plan => plan?.sections?.flatMap(s=>s.items)||[];
   R.normalizePlan = raw => {
     if(!raw||raw.version!==1||typeof raw.id!=='string'||!raw.id||raw.id.length>100||!Array.isArray(raw.sections)||raw.sections.length>50)throw Error('Invalid lesson plan.');
@@ -84,9 +84,9 @@
   R.creator.toolURL = (page,plan,sectionId) => {
     if(!Object.hasOwn(R.creator.names,page))throw Error('Choose a supported lesson tool.');
     const fresh=R.freshPlan(R.normalizePlan(plan));if(!fresh.sections.some(s=>s.id===sectionId))throw Error('Choose a lesson section first.');
-    const url=R.siteURL('language/'+page+'.html');url.hash='create='+R.creator.boundedEncode({version:1,plan:R.planSnapshot(fresh),sectionId});return url.href;
+    const url=R.siteURL(R.practicePath(page));url.hash='create='+R.creator.boundedEncode({version:1,plan:R.planSnapshot(fresh),sectionId});return url.href;
   };
-  R.creator.cleanURL = value => {const url=R.safeURL(value);if(url.origin!==location.origin||!Object.keys(R.creator.names).some(page=>url.pathname===R.siteURL('language/'+page+'.html').pathname))throw Error('Choose content from one of this site’s lesson tools.');url.hash='';['create','teacher','autostart'].forEach(key=>url.searchParams.delete(key));return R.localURL(url.href);};
+  R.creator.cleanURL = value => {const url=R.safeURL(value);if(url.origin!==location.origin||!Object.keys(R.creator.names).some(page=>url.pathname===R.siteURL(R.practicePath(page)).pathname))throw Error('Choose content from one of this site’s lesson tools.');url.hash='';['create','teacher','autostart'].forEach(key=>url.searchParams.delete(key));return R.localURL(url.href);};
   R.creator.readingContent = mode => {
     const source=R.$('#reading-text').value.trim(),format=R.$('#reading-format').value;
     const examples=format==='csv'?R.parseCSV(source):source?[source]:[];
@@ -163,15 +163,20 @@
   R.siteURL=path=>new URL(path,R.siteRoot);
   R.languageFiles=new Set(['slider.html','pyramid.html','wordparts.html','lettertiles.html']);
   R.route=path=>{
-    const text=String(path),match=text.match(/^(?:\.\/)?(?:language\/)?(slider\.html|pyramid\.html|wordparts\.html|lettertiles\.html)([?#].*)?$/);
-    return match?'language/'+match[1]+(match[2]||''):text;
+    const text=String(path),match=text.match(/^(?:\.\/)?(?:(?:language|math)\/)?([^/?#]+\.html)([?#].*)?$/);
+    if(!match)return text;
+    if(R.mathFiles?.has(match[1]))return 'math/'+match[1]+(match[2]||'');
+    return R.languageFiles.has(match[1])?'language/'+match[1]+(match[2]||''):text;
   };
   R.resolveURL=value=>{
     const text=String(value||'');
-    const owned=/^(?:\.\/)?(?:language\/)?(?:slider|pyramid|wordparts|lettertiles|lesson|index)\.html(?:[?#]|$)/.test(text);
+    const relative=text.match(/^(?:\.\/)?(?:(?:language|math)\/)?([^/?#]+\.html)([?#].*)?$/),owned=!!relative&&(R.languageFiles.has(relative[1])||R.mathFiles?.has(relative[1])||['lesson.html','index.html'].includes(relative[1]));
     let url=new URL(owned?R.route(text):text,owned?R.siteRoot:location.href);
     if(!['http:','https:'].includes(url.protocol)&&!(location.protocol==='file:'&&url.protocol==='file:'))throw Error('Use an http or https activity link.');
     const file=url.pathname.split('/').pop(),root=R.siteRoot.pathname;
+    if(R.mathFiles?.has(file)&&((url.origin===R.siteRoot.origin&&(url.pathname===root+file||url.pathname===root+'math/'+file))||(url.hostname==='meghanhorton.github.io'&&url.pathname.startsWith('/reading-slider/')))){
+      const canonical=R.siteURL('math/'+file);canonical.search=url.search;canonical.hash=url.hash;return canonical;
+    }
     const ours=url.origin===R.siteRoot.origin&&(url.pathname===root+file||url.pathname===root+'language/'+file);
     const legacy=url.hostname==='meghanhorton.github.io'&&url.pathname.startsWith('/reading-slider/')&&R.languageFiles.has(file);
     if(R.languageFiles.has(file)&&(ours||legacy)){
@@ -180,17 +185,23 @@
     return url;
   };
   R.mascotFiles={slider:'reading-slider',pyramid:'sentence-pyramids',wordparts:'word-parts',lettertiles:'letter-tiles',lesson:'lesson-plan'};
-  R.brandIcon=key=>R.mascotFiles[key]?'<img class="tool-brand-mascot" src="'+R.siteURL('assets/img/tool-icons/nav/'+R.mascotFiles[key]+'.png?v=header1').href+'" alt="" width="44" height="44">':(R.toolIcon?R.toolIcon(key):R.icon('home'));
+  R.brandIcon=key=>R.mascotFiles[key]?'<img class="tool-brand-mascot" src="'+R.siteURL('assets/img/tool-icons/'+(key==='addition'?'addition.png?v=addition1':'nav/'+R.mascotFiles[key]+'.png?v=header1')).href+'" alt="" width="44" height="44">':(R.toolIcon?R.toolIcon(key):R.icon('home'));
   if(R.toolMetadata?.home)R.toolMetadata.language={name:'Language',icon:R.toolMetadata.home.icon};
   /* MINIMAL TOOLS DROPDOWN */
   R.addToolsDropdown=bar=>{
     const slot=bar.querySelector('[data-nav-slot="links"]'),details=document.createElement('details');details.className='minimal-tools';
     const summary=document.createElement('summary');summary.className='icon-button minimal-tools-toggle';summary.textContent='Tools';details.appendChild(summary);
     const panel=document.createElement('nav');panel.className='minimal-tools-panel';panel.setAttribute('aria-label','Tools');
-    const tools=[['slider','Reading Slider','reading-slider','#048CD6'],['pyramid','Sentence Pyramids','sentence-pyramids','#FF6B43'],['wordparts','Word Parts','word-parts','#552CB8'],['lettertiles','Letter Tiles','letter-tiles','#FC7DA8']];
+    const tools=[['slider','Reading Slider','reading-slider','#048CD6'],['pyramid','Sentence Pyramids','sentence-pyramids','#FF6B43'],['wordparts','Word Parts','word-parts','#552CB8'],['lettertiles','Letter Tiles','letter-tiles','#FC7DA8'],['addition','Addition','addition','#FC4F42']];
+    const planLink=document.createElement('a');planLink.className='minimal-tools-item tools-plan-entry';planLink.href=R.siteURL('lesson.html').href;planLink.style.setProperty('--tool-link-color','#906E37');
+    const planImage=document.createElement('img');planImage.src=R.siteURL('assets/img/tool-icons/lesson-plan.png').href;planImage.alt='';planImage.width=44;planImage.height=50;planLink.appendChild(planImage);
+    const planName=document.createElement('span');planName.textContent='Lesson Plan';planLink.appendChild(planName);if(document.body.dataset.page==='lesson')planLink.setAttribute('aria-current','page');
+    planLink.addEventListener('click',event=>{if(R.creator?.context){try{planLink.href=R.creator.lessonURL(R.creator.getPlan());}catch(error){event.preventDefault();R.notice(error.message);return;}}details.open=false;});panel.appendChild(planLink);
+    const languageHeading=document.createElement('p');languageHeading.className='math-menu-heading';languageHeading.textContent='Language';panel.appendChild(languageHeading);
     for(const [key,name,file,color] of tools){
-      const link=document.createElement('a');link.href=R.siteURL('language/'+key+'.html').href;link.className='minimal-tools-item';link.style.setProperty('--tool-link-color',color);
-      const image=document.createElement('img');image.src=R.siteURL('assets/img/tool-icons/'+file+'.png').href;image.alt='';image.width=44;image.height=50;link.appendChild(image);
+      if(key==='addition'){const heading=document.createElement('p');heading.className='math-menu-heading';heading.textContent='Math';panel.appendChild(heading);}
+      const link=document.createElement('a');link.href=R.siteURL(R.practicePath(key)).href;link.className='minimal-tools-item';link.style.setProperty('--tool-link-color',color);
+      if(file){const image=document.createElement('img');image.src=R.siteURL('assets/img/tool-icons/'+file+'.png').href;image.alt='';image.width=44;image.height=50;link.appendChild(image);}else{const icon=document.createElement('span');icon.className='math-menu-icon';icon.innerHTML=R.toolIcon('addition');link.appendChild(icon);}
       const label=document.createElement('span');label.textContent=name;link.appendChild(label);if(document.body.dataset.page===key)link.setAttribute('aria-current','page');
       link.addEventListener('click',event=>{if(R.creator?.context){try{link.href=R.creator.toolURL(key,R.creator.getPlan(),R.creator.context.sectionId);}catch(error){event.preventDefault();R.notice(error.message);return;}}details.open=false;});panel.appendChild(link);
     }
@@ -210,7 +221,7 @@
     const bar=R.$('#appbar');if(!bar)return;
     const menu=bar.querySelector('.minimal-tools')||bar.querySelector('.tools-dropdown');
     if(menu){let slot=bar.querySelector('.header-tools-slot');if(!slot){slot=document.createElement('div');slot.className='nav-group header-tools-slot';bar.insertBefore(slot,R.$('#app-notice'));}slot.appendChild(menu);}
-    if(['slider','pyramid','wordparts','lettertiles','lesson'].includes(document.body.dataset.page)&&!bar.querySelector('.header-puppy-divider')){
+    if(['slider','pyramid','wordparts','lettertiles','addition','lesson'].includes(document.body.dataset.page)&&!bar.querySelector('.header-puppy-divider')){
       const divider=document.createElement('span');divider.className='header-puppy-divider';divider.setAttribute('aria-hidden','true');bar.insertBefore(divider,bar.querySelector('.appbar-title'));
     }
     if(document.body.dataset.page==='lesson'){
@@ -220,7 +231,7 @@
     }
   };
   /* STICKY TOOL CONTROLS */
-  R.isToolToolbarPage=()=>['slider','pyramid','wordparts','lettertiles'].includes(document.body.dataset.page);
+  R.isToolToolbarPage=()=>['slider','pyramid','wordparts','lettertiles','addition'].includes(document.body.dataset.page);
   R.toolToolbarLabels={"reading-edit": "Edit", "reading-copy": "Copy link", "reading-previous": "Previous", "reading-next": "Next", "example-previous": "Previous example", "example-next": "Next example", "tiles-edit": "Edit", "tiles-copy": "Copy link", "complete-return": "Done", "timer-start": "Start", "timer-pause": "Pause", "timer-reset": "Reset"};
   R.scheduleToolToolbar=()=>{if(!R.toolToolbar||R.toolToolbarFrame)return;R.toolToolbarFrame=requestAnimationFrame(()=>{R.toolToolbarFrame=null;R.refreshToolToolbar();});};
   R.refreshToolToolbar=()=>{
@@ -246,6 +257,20 @@
     if(typeof ResizeObserver==='function')new ResizeObserver(()=>R.scheduleToolToolbar()).observe(footer);
     window.addEventListener('resize',()=>R.scheduleToolToolbar());
     R.refreshToolToolbar();
+  };
+  /* MATH ADDITION INTEGRATION */
+  R.mathFiles=new Set(['addition.html']);
+  R.practicePath=page=>(R.mathFiles.has(page+'.html')?'math/':'language/')+page+'.html';
+  toolNames.add('addition.html');
+  R.toolMetadata.addition={name:'Addition',icon:"<circle cx=\"40\" cy=\"40\" r=\"29\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"5\"/><path d=\"M40 23v34M23 40h34\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"6\" stroke-linecap=\"round\"/>"};
+  R.toolMetadata.math={name:'Math',icon:R.toolMetadata.addition.icon};
+  R.creator.names.addition='Addition';
+  Object.assign(R.toolToolbarLabels,{'addition-edit':'Settings','addition-copy':'Copy link'});
+  /* CHARACTER ICONS + LESSON PLAN MENU */
+  R.mascotFiles.addition='addition';
+  R.lessonMascotMarkup=page=>{const file=R.mascotFiles[page];return file?'<img class="lesson-character-image" src="'+R.siteURL('assets/img/tool-icons/'+file+'.png').href+'" alt="" loading="lazy" decoding="async">':(R.toolIcon?R.toolIcon(page):R.icon('lesson'));};
+  R.lessonItemMascot=item=>{
+    try{const url=R.safeURL(item.url),page=Object.keys(R.creator.names).find(page=>url.origin===R.siteRoot.origin&&url.pathname===R.siteURL(R.practicePath(page)).pathname);return page?R.lessonMascotMarkup(page):'';}catch(error){return '';}
   };
   R.init = () => {
     if(R.initialized)return;R.initialized=true;

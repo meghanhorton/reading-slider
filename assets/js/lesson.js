@@ -2,7 +2,7 @@
 $(function(){
   'use strict';
   const R=window.ReadingApp;R.init();let plan,editing=false;
-  function blankPlan(){return R.normalizePlan({version:1,id:R.id(),title:'New Reading Lesson',updatedAt:0,sections:[]});}
+  function blankPlan(){return R.normalizePlan({version:1,id:R.id(),title:'New Lesson',updatedAt:0,sections:[]});}
   function message(text){R.$('#lesson-message').textContent=text;}
   function persist(){if(!R.savePlan(plan))message('Browser storage is unavailable. Copy your lesson link to keep changes.');try{history.replaceState(null,'',creating?R.creator.lessonURL(plan):R.lessonURL(plan));}catch(error){}}
   function changed(){R.touchPlan(plan);persist();refreshTimes();}
@@ -20,7 +20,7 @@ $(function(){
     const heading=document.createElement('div');heading.className='builder-heading';
     const title=document.createElement('h2');title.id='lesson-builder-title';title.textContent='Build your lesson with the tools';heading.appendChild(title);
     const toggle=document.createElement('button');toggle.type='button';toggle.className='btn '+(creating?'btn-primary':'btn-outline-primary');toggle.textContent=creating?'Exit create mode':'Enable create mode';toggle.setAttribute('aria-pressed',String(creating));toggle.addEventListener('click',()=>{creating=!creating;persist();renderBuilder();panel.querySelector('.builder-heading button').focus();});heading.appendChild(toggle);panel.appendChild(heading);
-    const description=document.createElement('p');description.textContent=creating?'Choose a section, open a tool, then use Add to lesson to save what you create.':'Enable Create mode to turn reading and spelling content into lesson activities.';panel.appendChild(description);
+    const description=document.createElement('p');description.textContent=creating?'Choose a section, open a tool, then use Add to lesson to save what you create.':'Enable Create mode to turn reading, spelling and math content into lesson activities.';panel.appendChild(description);
     if(!creating)return;
     if(!plan.sections.some(section=>section.id===builderSectionId))builderSectionId=plan.sections[0]?.id||'';
     const controls=document.createElement('div');controls.className='builder-controls';
@@ -32,7 +32,7 @@ $(function(){
     const grid=document.createElement('div');grid.className='builder-tool-grid';
     for(const [page,name] of Object.entries(R.creator.names)){
       const link=document.createElement('a');link.className='builder-tool-btn tool-theme';link.dataset.tool=page;
-      const icon=document.createElement('span');icon.className='builder-tool-icon';icon.innerHTML=R.toolIcon?R.toolIcon(page):R.icon('lesson');link.appendChild(icon);
+      const icon=document.createElement('span');icon.className='builder-tool-icon';icon.innerHTML=R.lessonMascotMarkup(page);link.appendChild(icon);
       const text=document.createElement('span');text.textContent=name;link.appendChild(text);
       if(builderSectionId){try{link.href=R.creator.toolURL(page,plan,builderSectionId);}catch(error){link.setAttribute('aria-disabled','true');}}else link.setAttribute('aria-disabled','true');
       link.addEventListener('click',event=>{if(!builderSectionId){event.preventDefault();R.notice('Create a lesson section first.');return;}try{persist();link.href=R.creator.toolURL(page,plan,builderSectionId);}catch(error){event.preventDefault();R.notice(error.message);}});grid.appendChild(link);
@@ -49,7 +49,7 @@ $(function(){
       section.items.forEach((item,i)=>{
         const row=$('<li class="lesson-item">').attr('data-item',item.id).toggleClass('is-complete',item.done).appendTo(list);
         $('<input type="checkbox" class="form-check-input lesson-check">').prop('checked',item.done).attr('aria-label',`Mark ${item.title} completed`).appendTo(row);
-        const content=$('<div class="lesson-item-content">').appendTo(row);$('<a class="lesson-activity view-only">').attr('href',item.url).text(item.title).appendTo(content);
+        const content=$('<div class="lesson-item-content">').appendTo(row);const activity=$('<a class="lesson-activity view-only">').attr('href',item.url).text(item.title).appendTo(content);const mascot=R.lessonItemMascot(item);if(mascot)activity.prepend($('<span class="lesson-row-mascot" aria-hidden="true">').html(mascot));
         $('<input class="form-control edit-only item-title">').val(item.title).attr({'aria-label':'Activity title',maxlength:200}).appendTo(content);$('<input class="form-control edit-only item-url">').val(item.url).attr('aria-label','Activity URL').appendTo(content);
         const controls=$('<div class="edit-only editor-actions">').appendTo(content);controls.append(moveButton('item-up','Move activity up','↑',i===0),moveButton('item-down','Move activity down','↓',i===section.items.length-1),$('<button type="button" class="btn btn-sm btn-outline-danger item-delete">').text('Remove'));
         $('<output class="item-time">').attr('aria-label',`Recorded time for ${item.title}`).appendTo(row);

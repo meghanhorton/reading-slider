@@ -1,3 +1,3 @@
 # Math
 
-Reserved for future Math pages and tools. Use shared root navigation, styles and lesson services; put subject-specific controllers in assets/js/math/. No Math activities are implemented yet.
+Addition is the first Math tool. Pages live here; its controller is assets/js/math/addition.js. Shared navigation, styles, lesson planning, timers and branding remain at the root.
